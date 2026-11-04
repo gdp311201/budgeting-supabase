@@ -1,13 +1,6 @@
 'use client'
 
-import { useState } from 'react'
 import { cn } from '@/lib/utils/format'
-
-export interface Tab {
-  id: string
-  label: string
-  icon: React.ReactNode
-}
 
 interface Props {
   tabs: string[]
@@ -56,6 +49,15 @@ const TAB_ICONS: Record<string, { label: string; svg: React.ReactNode }> = {
       </svg>
     ),
   },
+  setting: {
+    label: 'Setting',
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
 }
 
 export default function BottomNav({ tabs, activeTab, onChange }: Props) {
@@ -64,8 +66,8 @@ export default function BottomNav({ tabs, activeTab, onChange }: Props) {
       className="fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-1.5rem)] max-w-md"
       aria-label="Navigasi utama"
     >
-      <div className="bg-white/60 backdrop-blur-md border border-white/70 rounded-3xl px-3 py-2 shadow-xl">
-        <div className="flex items-center justify-around gap-1">
+      <div className="bg-white/60 backdrop-blur-md border border-white/70 rounded-3xl px-2 py-2 shadow-xl">
+        <div className="flex items-center justify-around gap-0.5">
           {tabs.map((tabId) => {
             const icon = TAB_ICONS[tabId]
             if (!icon) return null
@@ -75,13 +77,13 @@ export default function BottomNav({ tabs, activeTab, onChange }: Props) {
                 key={tabId}
                 onClick={() => onChange(tabId)}
                 className={cn(
-                  'flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all',
+                  'flex flex-col items-center gap-1 py-1.5 px-2 rounded-2xl transition-all',
                   isActive ? 'bg-pink-500 text-white shadow-md scale-105' : 'text-pink-900/60 hover:text-pink-950'
                 )}
                 aria-current={isActive ? 'page' : undefined}
               >
                 {icon.svg}
-                <span className="text-[10px] font-semibold">{icon.label}</span>
+                <span className="text-[9px] font-semibold">{icon.label}</span>
               </button>
             )
           })}

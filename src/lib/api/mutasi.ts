@@ -10,8 +10,10 @@ export interface MutasiTransaction {
   tgl: string
   kategori: string
   subkategori: string
+  display_label: string  // ← NEW: "→ MANDIRI" for PINDAH DANA, subkategori for others
   amount: number
   type: string
+  to_account_name: string | null  // ← NEW
   income: number | null
   expense: number | null
   mutasi_in: number | null

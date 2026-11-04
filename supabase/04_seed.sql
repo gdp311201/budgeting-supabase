@@ -1,17 +1,11 @@
 -- ============================================================
--- 04_SEED.SQL — Default Data
--- ============================================================
--- Run AFTER 01_schema.sql, 02_policies.sql, 03_functions.sql
---
--- Inserts default master data (quotes, emojis) + default
--- categories/subcategories for the FIRST user (you can also
--- skip this and use the Setup Wizard instead).
+-- 04_SEED.SQL — Default Data (FIXED VERSION)
 -- ============================================================
 
 -- ============================================================
--- DAILY QUOTES (aesthetic quotes buat dashboard)
+-- DAILY QUOTES (15 aesthetic quotes buat dashboard)
 -- ============================================================
-insert into public.daily_quotes (text, is_active) values
+insert into public.daily_quotes (text) values
   ('Akhir bulan bukan alasan buat sedih, tapi momentum buat nguji konsistensi hemat kita.'),
   ('Setiap rupiah yang kamu catat adalah investasi untuk masa depanmu.'),
   ('Bukan tentang berapa banyak yang kamu punya, tapi tentang berapa banyak yang kamu kelola.'),
@@ -30,7 +24,7 @@ insert into public.daily_quotes (text, is_active) values
 on conflict do nothing;
 
 -- ============================================================
--- DASHBOARD EMOJIS (kategori indikator dashboard)
+-- DASHBOARD EMOJIS (12 emoji indicators)
 -- ============================================================
 insert into public.dashboard_emojis (category, emoji, message) values
   ('safety', '🌸', 'Finansial aman dan terjaga'),
@@ -46,14 +40,3 @@ insert into public.dashboard_emojis (category, emoji, message) values
   ('celebrate', '🥳', 'Bulan yang luar biasa!'),
   ('celebrate', '💎', 'Premium financial discipline')
 on conflict do nothing;
-
--- ============================================================
--- DEFAULT CATEGORIES & SUBCATEGORIES
--- Mirror kategori yang ada di SUB_DATA original (transaksi.js)
--- Setelah user pertama signup via Google, jalankan scripts/seed-default-data.ts
--- untuk insert kategori/subkategori/akun default untuk user tersebut.
---
--- Cara pakai seed script:
---   1. Set MIGRATION_USER_ID di .env.local (dapat dari scripts/get-user-id.ts)
---   2. Run: bun run scripts/seed-default-data.ts
--- ============================================================

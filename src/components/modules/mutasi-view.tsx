@@ -272,7 +272,7 @@ export default function MutasiView() {
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-pink-950 truncate max-w-[65%]">
-                      {tx.subkategori}
+                      {tx.display_label || tx.subkategori || tx.kategori}
                     </p>
                     <div className="text-right">
                       {tx.income != null && tx.income > 0 && (

@@ -71,6 +71,7 @@ export type Database = {
           opening_balance: number
           sort_order: number
           is_active: boolean
+          is_selected: boolean
           created_at: string
         }
         Insert: {
@@ -81,6 +82,7 @@ export type Database = {
           opening_balance?: number
           sort_order?: number
           is_active?: boolean
+          is_selected?: boolean
           created_at?: string
         }
         Update: {
@@ -89,6 +91,7 @@ export type Database = {
           opening_balance?: number
           sort_order?: number
           is_active?: boolean
+          is_selected?: boolean
         }
       }
 

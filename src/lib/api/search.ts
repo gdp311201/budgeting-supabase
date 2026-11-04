@@ -11,7 +11,9 @@ export interface SearchTransaction {
   tgl_iso: string
   kategori: string
   subkategori: string
+  display_label: string  // ← NEW: "→ MANDIRI" for PINDAH DANA, subkategori for others
   akun: string
+  to_account_name: string | null  // ← NEW
   nominal: number
   type: string
 }

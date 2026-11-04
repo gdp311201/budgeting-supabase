@@ -12,8 +12,8 @@ import SearchView from '@/components/modules/search-view'
 import SetupView from '@/components/modules/setup-view'
 import ThemePickerModal from '@/components/theme-picker-modal'
 
-type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
-const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
+type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search' | 'setting'
+const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search', 'setting']
 
 type Profile = Database['public']['Tables']['profiles']['Row']
 
@@ -41,7 +41,6 @@ export default function BudgetingApp({
   profile: Profile | null
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
-  const [showSetup, setShowSetup] = useState(false)
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -140,24 +139,17 @@ export default function BudgetingApp({
       {/* Main content */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
         {activeTab === 'dashboard' && (
-          <DashboardView
-            onLongPressAsset={() => setShowSetup(true)}
-            user={user}
-          />
+          <DashboardView user={user} />
         )}
         {activeTab === 'input' && <InputView user={user} />}
         {activeTab === 'mutasi' && <MutasiView />}
         {activeTab === 'receipt' && <ReceiptView />}
         {activeTab === 'search' && <SearchView />}
+        {activeTab === 'setting' && <SetupView user={user} onClose={() => setActiveTab('dashboard')} />}
       </main>
 
-      {/* Floating bottom navigation */}
+      {/* Floating bottom navigation (6 tabs including Setting) */}
       <BottomNav tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
-
-      {/* Setup modal (secret: long-press asset card to open) */}
-      {showSetup && (
-        <SetupView user={user} onClose={() => setShowSetup(false)} />
-      )}
 
       {/* Theme picker modal */}
       <ThemePickerModal

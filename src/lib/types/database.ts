@@ -72,6 +72,7 @@ export type Database = {
           sort_order: number
           is_active: boolean
           is_selected: boolean
+          is_protected: boolean
           created_at: string
         }
         Insert: {
@@ -83,6 +84,7 @@ export type Database = {
           sort_order?: number
           is_active?: boolean
           is_selected?: boolean
+          is_protected?: boolean
           created_at?: string
         }
         Update: {
@@ -92,6 +94,7 @@ export type Database = {
           sort_order?: number
           is_active?: boolean
           is_selected?: boolean
+          is_protected?: boolean
         }
       }
 
@@ -132,6 +135,7 @@ export type Database = {
           default_amount: number | null
           sort_order: number
           is_active: boolean
+          is_custom: boolean
         }
         Insert: {
           id?: string
@@ -141,12 +145,14 @@ export type Database = {
           default_amount?: number | null
           sort_order?: number
           is_active?: boolean
+          is_custom?: boolean
         }
         Update: {
           name?: string
           default_amount?: number | null
           sort_order?: number
           is_active?: boolean
+          is_custom?: boolean
         }
       }
 

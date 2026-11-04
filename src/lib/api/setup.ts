@@ -105,6 +105,10 @@ export async function deleteCategory(id: string): Promise<void> {
 // SUBCATEGORIES — CRUD
 // ============================================================
 
+/**
+ * Add subcategory. If parent category is 'investment', auto-create
+ * a matching investment account (linked by name).
+ */
 export async function addSubcategory(sub: SubcategoryInsert): Promise<Subcategory> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -113,7 +117,37 @@ export async function addSubcategory(sub: SubcategoryInsert): Promise<Subcategor
     .select()
     .single()
   if (error) throw new Error(error.message)
-  return data as Subcategory
+
+  const newSub = data as Subcategory
+
+  // Check if parent category is 'investment'
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('type')
+    .eq('id', sub.category_id)
+    .single()
+
+  if (cat?.type === 'investment') {
+    // Auto-create investment account with same name
+    try {
+      await supabase
+        .from('accounts')
+        .insert({
+          user_id: sub.user_id,
+          name: newSub.name,
+          type: 'investment',
+          opening_balance: 0,
+          sort_order: 200,
+          is_active: true,
+          is_selected: true,
+          is_protected: false, // custom investment account, can be deleted
+        })
+    } catch (err) {
+      console.warn('Failed to auto-create investment account:', err)
+    }
+  }
+
+  return newSub
 }
 
 export async function updateSubcategory(id: string, updates: SubcategoryUpdate): Promise<Subcategory> {
@@ -128,10 +162,49 @@ export async function updateSubcategory(id: string, updates: SubcategoryUpdate):
   return data as Subcategory
 }
 
+/**
+ * Delete subcategory. If linked to an investment account (custom),
+ * also delete the account (if no transactions reference it).
+ */
 export async function deleteSubcategory(id: string): Promise<void> {
   const supabase = createClient()
+
+  // Get subcategory info before delete
+  const { data: sub } = await supabase
+    .from('subcategories')
+    .select('user_id, name, category_id, is_custom')
+    .eq('id', id)
+    .single()
+
+  if (!sub) throw new Error('Subcategory not found')
+
+  // Check if parent is investment
+  const { data: cat } = await supabase
+    .from('categories')
+    .select('type')
+    .eq('id', sub.category_id)
+    .single()
+
+  // Delete the subcategory
   const { error } = await supabase.from('subcategories').delete().eq('id', id)
   if (error) throw new Error(error.message)
+
+  // If parent is investment, try to delete matching account (custom only)
+  if (cat?.type === 'investment' && sub.is_custom) {
+    // Find matching account
+    const { data: acc } = await supabase
+      .from('accounts')
+      .select('id, is_protected')
+      .eq('user_id', sub.user_id)
+      .eq('name', sub.name)
+      .eq('type', 'investment')
+      .single()
+
+    if (acc && !acc.is_protected) {
+      // Try to delete (will fail if transactions reference it — that's OK)
+      await supabase.from('accounts').delete().eq('id', acc.id)
+    }
+  }
 }
 
 // ============================================================

@@ -150,3 +150,72 @@ export async function upsertBudget(
   if (error) throw new Error(error.message)
   return data as Budget
 }
+
+/**
+ * Set DEFAULT budget (sticky, applies to all months unless overridden)
+ * month = 0, year = 0 means "default"
+ */
+export async function setDefaultBudget(
+  userId: string,
+  subcategoryId: string,
+  amount: number
+): Promise<Budget> {
+  return upsertBudget({
+    user_id: userId,
+    subcategory_id: subcategoryId,
+    month: 0,
+    year: 0,
+    amount,
+  })
+}
+
+/**
+ * Get default budget (sticky) for a subcategory
+ */
+export function getDefaultBudget(
+  budgets: Budget[],
+  subcategoryId: string
+): number {
+  const defaultBudget = budgets.find(
+    (b) => b.subcategory_id === subcategoryId && b.month === 0 && b.year === 0
+  )
+  return defaultBudget?.amount ?? 0
+}
+
+/**
+ * Get effective budget for a subcategory in a specific month/year
+ * Priority: monthly override > default
+ */
+export function getEffectiveBudget(
+  budgets: Budget[],
+  subcategoryId: string,
+  month: number,
+  year: number
+): { amount: number; isOverride: boolean } {
+  const override = budgets.find(
+    (b) => b.subcategory_id === subcategoryId && b.month === month && b.year === year
+  )
+  if (override) {
+    return { amount: override.amount, isOverride: true }
+  }
+  const defaultBudget = budgets.find(
+    (b) => b.subcategory_id === subcategoryId && b.month === 0 && b.year === 0
+  )
+  return { amount: defaultBudget?.amount ?? 0, isOverride: false }
+}
+
+// ============================================================
+// ACCOUNT SELECTION — toggle is_selected
+// ============================================================
+
+export async function setAccountSelected(
+  accountId: string,
+  isSelected: boolean
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('accounts')
+    .update({ is_selected: isSelected })
+    .eq('id', accountId)
+  if (error) throw new Error(error.message)
+}

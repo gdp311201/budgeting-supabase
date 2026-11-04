@@ -401,36 +401,34 @@ function SwipeableTransactionCard({
       className="relative rounded-xl overflow-hidden select-none"
       style={{ touchAction: 'pan-y' }}
     >
-      {/* Action buttons (background) */}
-      <div className="absolute inset-0 flex">
-        {/* Edit (left side, revealed when swiped right) */}
-        <button
-          onClick={handleEditClick}
-          className="w-[84px] bg-gradient-to-br from-blue-400 to-blue-600 text-white flex flex-col items-center justify-center gap-1"
-          style={{ marginLeft: '-84px' }}
-        >
-          <span className="text-lg">✏️</span>
-          <span className="text-[9px] font-bold">EDIT</span>
-        </button>
-        <div className="flex-1"></div>
-        {/* Delete (right side, revealed when swiped left) */}
-        <button
-          onClick={handleDeleteClick}
-          className="w-[84px] bg-gradient-to-br from-rose-400 to-rose-600 text-white flex flex-col items-center justify-center gap-1"
-          style={{ marginRight: '-84px' }}
-        >
-          <span className="text-lg">🗑️</span>
-          <span className="text-[9px] font-bold">HAPUS</span>
-        </button>
-      </div>
+      {/* Action buttons (background, positioned absolutely behind card) */}
+      {/* Edit button (left side, revealed when swiped right) */}
+      <button
+        onClick={handleEditClick}
+        className="absolute left-0 top-0 bottom-0 w-[84px] z-0 bg-gradient-to-br from-blue-400 to-blue-600 text-white flex flex-col items-center justify-center gap-1"
+        type="button"
+      >
+        <span className="text-lg">✏️</span>
+        <span className="text-[9px] font-bold">EDIT</span>
+      </button>
 
-      {/* Card content (foreground, draggable) */}
+      {/* Delete button (right side, revealed when swiped left) */}
+      <button
+        onClick={handleDeleteClick}
+        className="absolute right-0 top-0 bottom-0 w-[84px] z-0 bg-gradient-to-br from-rose-400 to-rose-600 text-white flex flex-col items-center justify-center gap-1"
+        type="button"
+      >
+        <span className="text-lg">🗑️</span>
+        <span className="text-[9px] font-bold">HAPUS</span>
+      </button>
+
+      {/* Card content (foreground, draggable, sits above buttons) */}
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="relative bg-white/70 backdrop-blur-sm p-2.5 border border-pink-100/80 rounded-xl cursor-grab active:cursor-grabbing transition-transform"
+        className="relative z-10 bg-white/80 backdrop-blur-sm p-2.5 border border-pink-100/80 rounded-xl cursor-grab active:cursor-grabbing"
         style={{
           transform: `translateX(${dragX}px)`,
           transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
@@ -443,7 +441,7 @@ function SwipeableTransactionCard({
                 {transaction.kategori}
               </span>
               <span className="text-[10px] font-bold text-pink-950/80 truncate">
-                {transaction.subkategori || '—'}
+                {transaction.display_label || transaction.subkategori || '—'}
               </span>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-pink-900/60 font-medium">

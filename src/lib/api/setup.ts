@@ -292,3 +292,45 @@ export async function setAccountSelected(
     .eq('id', accountId)
   if (error) throw new Error(error.message)
 }
+
+/**
+ * Update opening balance of an investment account by name (auto-link)
+ * Used when user edits opening balance of an investment subkategori
+ */
+export async function updateInvestmentAccountByName(
+  userId: string,
+  accountName: string,
+  newBalance: number
+): Promise<void> {
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('accounts')
+    .update({ opening_balance: newBalance })
+    .eq('user_id', userId)
+    .eq('name', accountName)
+    .eq('type', 'investment')
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * Delete an investment account by name (auto-link, custom only)
+ * Used when user deletes a custom investment subkategori
+ */
+export async function deleteInvestmentAccountByName(
+  userId: string,
+  accountName: string
+): Promise<void> {
+  const supabase = createClient()
+  // Only delete if not protected (custom accounts)
+  const { data: acc } = await supabase
+    .from('accounts')
+    .select('id, is_protected')
+    .eq('user_id', userId)
+    .eq('name', accountName)
+    .eq('type', 'investment')
+    .single()
+
+  if (acc && !acc.is_protected) {
+    await supabase.from('accounts').delete().eq('id', acc.id)
+  }
+}

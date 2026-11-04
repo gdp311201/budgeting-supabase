@@ -1,13 +1,12 @@
 'use client'
 
 import type { User } from '@supabase/supabase-js'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   getSetupData,
   addAccount,
   updateAccount,
   deleteAccount,
-  setAccountSelected,
   addCategory,
   updateCategory,
   deleteCategory,
@@ -16,6 +15,8 @@ import {
   deleteSubcategory,
   setDefaultBudget,
   getDefaultBudget,
+  updateInvestmentAccountByName,
+  deleteInvestmentAccountByName,
   type SetupData,
 } from '@/lib/api/setup'
 import { getBankOptions } from '@/lib/api/bank-options'
@@ -49,23 +50,17 @@ const ACCOUNT_TYPES = [
   { value: 'investment', label: '💰 Investment' },
 ]
 
-const ACCOUNT_GROUP_LABELS: Record<string, { icon: string; label: string }> = {
-  cash: { icon: '💵', label: 'CASH' },
-  bank: { icon: '🏦', label: 'BANK' },
-  ewallet: { icon: '📱', label: 'E-WALLET' },
-  investment: { icon: '💰', label: 'INVESTASI' },
-}
-
 export default function SetupView({ user, onClose }: Props) {
   const [data, setData] = useState<SetupData | null>(null)
   const [bankOptions, setBankOptions] = useState<BankOption[]>([])
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
-  const [showHiddenAccounts, setShowHiddenAccounts] = useState(false)
 
   // Modal state for adding new items
-  const [showAddAccount, setShowAddAccount] = useState(false)
+  const [showAddAccountBank, setShowAddAccountBank] = useState(false)
+  const [showAddAccountEwallet, setShowAddAccountEwallet] = useState(false)
+  const [showAddAccountInvestment, setShowAddAccountInvestment] = useState(false)
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddSubcategory, setShowAddSubcategory] = useState<string | null>(null)
 
@@ -88,15 +83,15 @@ export default function SetupView({ user, onClose }: Props) {
   // ============================================================
   // COMPUTED: Rekap Alokasi (default budgets)
   // ============================================================
-  const rekapAlokasi = useMemo(() => {
+  const rekapAlokasi = (() => {
     if (!data) return null
 
-    // Group default budgets by category
     const categoryBudgets: Record<string, number> = {}
     let expectedIncome = 0
     let totalBudget = 0
 
     for (const cat of data.categories) {
+      if (cat.type === 'transfer') continue // Skip PINDAH DANA
       const subs = data.subcategories.filter((s) => s.category_id === cat.id)
       const catTotal = subs.reduce((sum, sub) => {
         const budget = getDefaultBudget(data.budgets, sub.id)
@@ -104,7 +99,6 @@ export default function SetupView({ user, onClose }: Props) {
       }, 0)
       categoryBudgets[cat.id] = catTotal
 
-      // Income categories contribute to expected income
       if (cat.type === 'income') {
         expectedIncome += catTotal
       } else {
@@ -115,49 +109,32 @@ export default function SetupView({ user, onClose }: Props) {
     const sisaBudget = expectedIncome - totalBudget
     const sisaPct = expectedIncome > 0 ? (sisaBudget / expectedIncome) * 100 : 0
 
-    return {
-      categoryBudgets,
-      expectedIncome,
-      totalBudget,
-      sisaBudget,
-      sisaPct,
-    }
-  }, [data])
+    return { categoryBudgets, expectedIncome, totalBudget, sisaBudget, sisaPct }
+  })()
 
   // ============================================================
-  // COMPUTED: Grouped accounts (cash → bank → ewallet → investment, alphabetical)
+  // COMPUTED: Grouped accounts
   // ============================================================
-  const groupedAccounts = useMemo(() => {
-    if (!data) return { visible: {}, hidden: {} }
-
-    const visible: Record<string, Account[]> = {}
-    const hidden: Record<string, Account[]> = {}
-
-    for (const acc of data.accounts) {
-      const target = acc.is_selected ? visible : hidden
-      if (!target[acc.type]) target[acc.type] = []
-      target[acc.type].push(acc)
-    }
-
-    // Sort each group alphabetically by name
-    for (const group of [visible, hidden]) {
-      for (const type of Object.keys(group)) {
-        group[type].sort((a, b) => a.name.localeCompare(b.name))
-      }
-    }
-
-    return { visible, hidden }
-  }, [data])
+  const cashAccounts = data?.accounts.filter(a => a.type === 'cash') ?? []
+  const bankAccounts = data?.accounts
+    .filter(a => a.type === 'bank' && a.is_selected)
+    .sort((a, b) => a.name.localeCompare(b.name)) ?? []
+  const ewalletAccounts = data?.accounts
+    .filter(a => a.type === 'ewallet' && a.is_selected)
+    .sort((a, b) => a.name.localeCompare(b.name)) ?? []
+  const investmentAccounts = data?.accounts
+    .filter(a => a.type === 'investment' && a.is_selected)
+    .sort((a, b) => a.name.localeCompare(b.name)) ?? []
 
   // Group subcategories by category_id
-  const subcategoriesByCategory = useMemo(() => {
+  const subcategoriesByCategory = (() => {
     const map: Record<string, Subcategory[]> = {}
     for (const sub of data?.subcategories ?? []) {
       if (!map[sub.category_id]) map[sub.category_id] = []
       map[sub.category_id].push(sub)
     }
     return map
-  }, [data])
+  })()
 
   // ============================================================
   // HANDLERS
@@ -166,15 +143,6 @@ export default function SetupView({ user, onClose }: Props) {
   async function handleUpdateOpeningBalance(account: Account, newBalance: number) {
     try {
       await updateAccount(account.id, { opening_balance: newBalance })
-      await reload()
-    } catch (err: any) {
-      alert('Error: ' + err.message)
-    }
-  }
-
-  async function handleToggleAccountSelected(account: Account) {
-    try {
-      await setAccountSelected(account.id, !account.is_selected)
       await reload()
     } catch (err: any) {
       alert('Error: ' + err.message)
@@ -238,6 +206,16 @@ export default function SetupView({ user, onClose }: Props) {
     }
   }
 
+  // Investment subkategori handler: update opening balance via linked account
+  async function handleUpdateInvestmentBalance(sub: Subcategory, newBalance: number) {
+    try {
+      await updateInvestmentAccountByName(user.id, sub.name, newBalance)
+      await reload()
+    } catch (err: any) {
+      alert('Error: ' + err.message)
+    }
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -253,6 +231,24 @@ export default function SetupView({ user, onClose }: Props) {
         <p className="text-xs text-rose-700">Gagal memuat data setup</p>
       </div>
     )
+  }
+
+  // Get investment account balance by subkategori name (auto-link)
+  const getInvestmentBalance = (subName: string): number => {
+    const acc = data.accounts.find(a => a.name === subName && a.type === 'investment')
+    return acc?.opening_balance ?? 0
+  }
+
+  // Check if subkategori is investment
+  const isInvestmentSub = (sub: Subcategory): boolean => {
+    const cat = data.categories.find(c => c.id === sub.category_id)
+    return cat?.type === 'investment'
+  }
+
+  // Get available bank options (not yet selected by user)
+  const getAvailableBanks = (type: 'bank' | 'ewallet') => {
+    const userAccountNames = data.accounts.map(a => a.name)
+    return bankOptions.filter(b => b.type === type && !userAccountNames.includes(b.name))
   }
 
   return (
@@ -290,36 +286,38 @@ export default function SetupView({ user, onClose }: Props) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {data.categories.map((cat) => {
-              const catBudget = rekapAlokasi.categoryBudgets[cat.id] ?? 0
-              const pct = rekapAlokasi.expectedIncome > 0 && cat.type !== 'income'
-                ? (catBudget / rekapAlokasi.expectedIncome) * 100
-                : 0
-              return (
-                <div
-                  key={cat.id}
-                  className="flex items-center justify-between py-1 border-b border-amber-200/40 last:border-0"
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-sm">{cat.icon ?? '📁'}</span>
-                    <span className="text-[11px] font-semibold text-pink-950 truncate">
-                      {cat.name}
-                    </span>
+            {data.categories
+              .filter(cat => cat.type !== 'transfer') // Skip PINDAH DANA
+              .map((cat) => {
+                const catBudget = rekapAlokasi.categoryBudgets[cat.id] ?? 0
+                const pct = rekapAlokasi.expectedIncome > 0 && cat.type !== 'income'
+                  ? (catBudget / rekapAlokasi.expectedIncome) * 100
+                  : 0
+                return (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between py-1 border-b border-amber-200/40 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-sm">{cat.icon ?? '📁'}</span>
+                      <span className="text-[11px] font-semibold text-pink-950 truncate">
+                        {cat.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-pink-700/60 font-medium">
+                        {cat.type === 'income' ? '' : pct > 0 ? `${pct.toFixed(1)}%` : ''}
+                      </span>
+                      <span className={cn(
+                        'text-xs font-bold',
+                        cat.type === 'income' ? 'text-emerald-700' : 'text-pink-950'
+                      )}>
+                        {formatRupiah(catBudget)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[10px] text-pink-700/60 font-medium">
-                      {cat.type === 'income' ? '' : pct > 0 ? `${pct.toFixed(1)}%` : ''}
-                    </span>
-                    <span className={cn(
-                      'text-xs font-bold',
-                      cat.type === 'income' ? 'text-emerald-700' : 'text-pink-950'
-                    )}>
-                      {formatRupiah(catBudget)}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
           </div>
           {/* Sisa Budget summary */}
           <div className={cn(
@@ -351,281 +349,195 @@ export default function SetupView({ user, onClose }: Props) {
         </section>
       )}
 
-      {/* === SECTION: AKUN BANK (Grouped) === */}
+      {/* === SECTION: AKUN (CASH + BANK + E-WALLET) === */}
       <section className="glass-mini rounded-2xl p-3 border border-pink-200/60 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-bold text-pink-950/80 uppercase tracking-wider">
-            🏦 Akun Bank & E-wallet
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full">
-              {Object.values(groupedAccounts.visible).flat().filter(a => a.type !== 'investment').length} aktif
-            </span>
-            {editMode && (
-              <button
-                onClick={() => setShowAddAccount(true)}
-                className="text-[10px] font-bold text-white bg-pink-500 hover:bg-pink-600 px-2 py-0.5 rounded-full"
-              >
-                + Tambah
-              </button>
-            )}
-          </div>
+        <h3 className="text-xs font-bold text-pink-950/80 uppercase tracking-wider mb-2">
+          🏦 Akun Bank & E-wallet
+        </h3>
+
+        {/* 💵 CASH (permanen, hanya edit opening balance) */}
+        <p className="text-[9px] font-bold uppercase tracking-wider text-pink-700/60 mb-1 px-1">
+          💵 CASH
+        </p>
+        <div className="space-y-1 mb-3">
+          {cashAccounts.map((acc) => (
+            <AccountRow
+              key={`${acc.id}-${acc.opening_balance}`}
+              account={acc}
+              editMode={editMode}
+              onUpdateBalance={handleUpdateOpeningBalance}
+              onDelete={handleDeleteAccount}
+            />
+          ))}
+          {cashAccounts.length === 0 && (
+            <p className="text-[10px] text-pink-700/50 italic px-2 py-1">
+              CASH akan otomatis dibuat saat signup
+            </p>
+          )}
         </div>
 
-        {/* Visible accounts grouped by type */}
-        {['cash', 'bank', 'ewallet'].map((type) => {
-          const accounts = groupedAccounts.visible[type] ?? []
-          if (accounts.length === 0) return null
-          const groupLabel = ACCOUNT_GROUP_LABELS[type]
-          return (
-            <div key={type} className="mb-2 last:mb-0">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-pink-700/60 mb-1 px-1">
-                {groupLabel.icon} {groupLabel.label}
-              </p>
-              <div className="space-y-1">
-                {accounts.map((acc) => (
-                  <AccountRow
-                    key={`${acc.id}-${acc.opening_balance}-${acc.is_selected}`}
-                    account={acc}
-                    editMode={editMode}
-                    onUpdateBalance={handleUpdateOpeningBalance}
-                    onDelete={handleDeleteAccount}
-                    onToggleSelected={handleToggleAccountSelected}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        })}
+        {/* 🏦 BANK (dropdown picker) */}
+        <p className="text-[9px] font-bold uppercase tracking-wider text-pink-700/60 mb-1 px-1">
+          🏦 BANK
+        </p>
+        <div className="space-y-1 mb-2">
+          {bankAccounts.map((acc) => (
+            <AccountRow
+              key={`${acc.id}-${acc.opening_balance}`}
+              account={acc}
+              editMode={editMode}
+              onUpdateBalance={handleUpdateOpeningBalance}
+              onDelete={handleDeleteAccount}
+            />
+          ))}
+          {bankAccounts.length === 0 && (
+            <p className="text-[10px] text-pink-700/50 italic px-2 py-1">
+              Belum ada bank dipilih
+            </p>
+          )}
+        </div>
+        {editMode && (
+          <button
+            onClick={() => setShowAddAccountBank(true)}
+            className="w-full text-[10px] font-bold text-white bg-pink-500 hover:bg-pink-600 py-1.5 rounded-xl mb-3"
+          >
+            + Tambah Bank
+          </button>
+        )}
+
+        {/* 📱 E-WALLET (dropdown picker) */}
+        <p className="text-[9px] font-bold uppercase tracking-wider text-pink-700/60 mb-1 px-1">
+          📱 E-WALLET
+        </p>
+        <div className="space-y-1 mb-2">
+          {ewalletAccounts.map((acc) => (
+            <AccountRow
+              key={`${acc.id}-${acc.opening_balance}`}
+              account={acc}
+              editMode={editMode}
+              onUpdateBalance={handleUpdateOpeningBalance}
+              onDelete={handleDeleteAccount}
+            />
+          ))}
+          {ewalletAccounts.length === 0 && (
+            <p className="text-[10px] text-pink-700/50 italic px-2 py-1">
+              Belum ada e-wallet dipilih
+            </p>
+          )}
+        </div>
+        {editMode && (
+          <button
+            onClick={() => setShowAddAccountEwallet(true)}
+            className="w-full text-[10px] font-bold text-white bg-pink-500 hover:bg-pink-600 py-1.5 rounded-xl"
+          >
+            + Tambah E-wallet
+          </button>
+        )}
 
         {/* Total Saldo Awal */}
         <div className="flex justify-between items-center bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mt-2">
           <span className="text-[11px] font-bold text-emerald-900 uppercase">
-            Total Saldo Awal (aktif)
+            Total Saldo Awal
           </span>
           <span className="text-sm font-bold text-emerald-950">
             {formatRupiah(
-              Object.values(groupedAccounts.visible)
-                .flat()
-                .filter((a) => a.type !== 'investment')
+              [...cashAccounts, ...bankAccounts, ...ewalletAccounts]
                 .reduce((sum, a) => sum + a.opening_balance, 0)
             )}
           </span>
         </div>
-
-        {/* Hidden accounts section (edit mode only) */}
-        {editMode && (() => {
-          const hiddenNonInvestment = (groupedAccounts.hidden['cash'] ?? [])
-            .concat(groupedAccounts.hidden['bank'] ?? [])
-            .concat(groupedAccounts.hidden['ewallet'] ?? [])
-          if (hiddenNonInvestment.length === 0) return null
-          return (
-            <div className="mt-3 pt-2 border-t border-pink-200/40">
-              <button
-                onClick={() => setShowHiddenAccounts(!showHiddenAccounts)}
-                className="text-[10px] font-bold text-pink-700/70 hover:text-pink-900 flex items-center gap-1"
-              >
-                {showHiddenAccounts ? '▼' : '▶'} Akun Tersembunyi ({hiddenNonInvestment.length})
-              </button>
-              {showHiddenAccounts && (
-                <div className="mt-2 space-y-1">
-                  {hiddenNonInvestment.map((acc) => (
-                    <div
-                      key={acc.id}
-                      className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2"
-                    >
-                      <div className="flex items-center gap-2 flex-1">
-                        <span className="text-[9px] font-bold uppercase text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {acc.type}
-                        </span>
-                        <span className="text-sm font-semibold text-gray-500 truncate">
-                          {acc.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-gray-400">
-                          {formatRupiah(acc.opening_balance)}
-                        </span>
-                        <button
-                          onClick={() => handleToggleAccountSelected(acc)}
-                          className="text-[10px] text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded font-bold"
-                          title="Tampilkan akun ini"
-                        >
-                          ✓ Tampilkan
-                        </button>
-                        <button
-                          onClick={() => handleDeleteAccount(acc)}
-                          className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })()}
       </section>
 
-      {/* === SECTION: AKUN INVESTASI (Grouped, sorted) === */}
-      {(groupedAccounts.visible['investment'] ?? []).length > 0 && (
-        <section className="glass-mini rounded-2xl p-3 border border-pink-200/60 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-pink-950/80 uppercase tracking-wider">
-              💰 Akun Investasi
-            </h3>
-            <span className="text-[10px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full">
-              {(groupedAccounts.visible['investment'] ?? []).length} aktif
-            </span>
-          </div>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-pink-700/60 mb-1 px-1">
-            💰 INVESTASI
-          </p>
-          <div className="space-y-1">
-            {(groupedAccounts.visible['investment'] ?? []).map((acc) => (
-              <AccountRow
-                key={`${acc.id}-${acc.opening_balance}-${acc.is_selected}`}
-                account={acc}
-                editMode={editMode}
-                onUpdateBalance={handleUpdateOpeningBalance}
-                onDelete={handleDeleteAccount}
-                onToggleSelected={handleToggleAccountSelected}
-              />
-            ))}
-          </div>
-
-          {/* Hidden investment accounts */}
-          {editMode && (groupedAccounts.hidden['investment'] ?? []).length > 0 && (
-            <div className="mt-3 pt-2 border-t border-pink-200/40">
-              <p className="text-[9px] font-bold text-pink-700/60 mb-1 px-1">
-                Tersembunyi ({(groupedAccounts.hidden['investment'] ?? []).length})
-              </p>
-              <div className="space-y-1">
-                {(groupedAccounts.hidden['investment'] ?? []).map((acc) => (
-                  <div
-                    key={acc.id}
-                    className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl px-3 py-2"
-                  >
-                    <span className="text-sm font-semibold text-gray-500 truncate">
-                      {acc.name}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleToggleAccountSelected(acc)}
-                        className="text-[10px] text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded font-bold"
-                      >
-                        ✓ Tampilkan
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAccount(acc)}
-                        className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* === SECTION: KATEGORI + SUBKATEGORI (with budget) === */}
+      {/* === SECTION: KATEGORI + SUBKATEGORI === */}
       <section className="glass-mini rounded-2xl p-3 border border-pink-200/60 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-bold text-pink-950/80 uppercase tracking-wider">
             📋 Kategori & Sub-kategori
           </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full">
-              {data.categories.length} kategori · {data.subcategories.length} sub
-            </span>
-            {editMode && (
-              <button
-                onClick={() => setShowAddCategory(true)}
-                className="text-[10px] font-bold text-white bg-pink-500 hover:bg-pink-600 px-2 py-0.5 rounded-full"
-              >
-                + Kategori
-              </button>
-            )}
-          </div>
+          {editMode && (
+            <button
+              onClick={() => setShowAddCategory(true)}
+              className="text-[10px] font-bold text-white bg-pink-500 hover:bg-pink-600 px-2 py-0.5 rounded-full"
+            >
+              + Kategori
+            </button>
+          )}
         </div>
         <div className="space-y-1">
-          {data.categories.map((cat) => {
-            const subs = subcategoriesByCategory[cat.id] ?? []
-            const isExpanded = expandedCategory === cat.id
-            const catBudget = rekapAlokasi?.categoryBudgets[cat.id] ?? 0
-            return (
-              <div key={cat.id} className="border border-pink-200/60 rounded-xl overflow-hidden">
-                {/* Category header */}
-                <div className="flex items-center gap-2 bg-white/70 px-3 py-2">
-                  <button
-                    onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
-                    className="flex items-center gap-2 flex-1 text-left min-w-0"
-                  >
-                    <span className="text-lg shrink-0">{cat.icon ?? '📁'}</span>
-                    <span className="text-xs font-bold text-pink-950 flex-1 truncate">
-                      {cat.name}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
-                      {formatRupiah(catBudget)}
-                    </span>
-                    <span className="text-[9px] font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-full shrink-0">
-                      {subs.length} sub
-                    </span>
-                    <span className={`text-xs text-pink-600 transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`}>
-                      ▶
-                    </span>
-                  </button>
-                  {editMode && (
-                    <>
-                      <button
-                        onClick={() => setShowAddSubcategory(cat.id)}
-                        className="text-[10px] font-bold text-pink-600 bg-pink-50 hover:bg-pink-100 px-1.5 py-0.5 rounded shrink-0"
-                        title="Tambah subkategori"
-                      >
-                        + Sub
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCategory(cat)}
-                        className="text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded shrink-0"
-                        title="Hapus kategori"
-                      >
-                        🗑️
-                      </button>
-                    </>
-                  )}
-                </div>
-                {/* Subcategories (expandable) */}
-                {isExpanded && (
-                  <div className="bg-pink-50/50 px-3 py-2 space-y-0.5 border-t border-pink-200/60">
-                    {subs.length === 0 ? (
-                      <p className="text-[10px] text-pink-700/50 italic py-1">
-                        {cat.type === 'transfer'
-                          ? '(Pindah dana pakai akun yang dipilih, nggak perlu subkategori)'
-                          : '(Belum ada subkategori)'}
-                      </p>
-                    ) : (
-                      subs.map((sub) => (
-                        <SubcategoryRow
-                          key={`${sub.id}-${sub.name}`}
-                          subcategory={sub}
-                          budget={getDefaultBudget(data.budgets, sub.id)}
-                          editMode={editMode}
-                          onUpdateName={handleUpdateSubcategory}
-                          onDelete={handleDeleteSubcategory}
-                          onSetBudget={handleSetBudget}
-                        />
-                      ))
+          {data.categories
+            .filter(cat => cat.type !== 'transfer') // Hide PINDAH DANA
+            .map((cat) => {
+              const subs = subcategoriesByCategory[cat.id] ?? []
+              const isExpanded = expandedCategory === cat.id
+              const catBudget = rekapAlokasi?.categoryBudgets[cat.id] ?? 0
+              const isDefaultCategory = cat.sort_order <= 12
+              return (
+                <div key={cat.id} className="border border-pink-200/60 rounded-xl overflow-hidden">
+                  {/* Category header */}
+                  <div className="flex items-center gap-2 bg-white/70 px-3 py-2">
+                    <button
+                      onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                      className="flex items-center gap-2 flex-1 text-left min-w-0"
+                    >
+                      <span className="text-lg shrink-0">{cat.icon ?? '📁'}</span>
+                      <span className="text-xs font-bold text-pink-950 flex-1 truncate">
+                        {cat.name}
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                        {formatRupiah(catBudget)}
+                      </span>
+                      <span className={`text-xs text-pink-600 transition-transform shrink-0 ${isExpanded ? 'rotate-90' : ''}`}>
+                        ▶
+                      </span>
+                    </button>
+                    {editMode && (
+                      <>
+                        <button
+                          onClick={() => setShowAddSubcategory(cat.id)}
+                          className="text-[10px] font-bold text-pink-600 bg-pink-50 hover:bg-pink-100 px-1.5 py-0.5 rounded shrink-0"
+                          title="Tambah subkategori"
+                        >
+                          + Sub
+                        </button>
+                        {!isDefaultCategory && (
+                          <button
+                            onClick={() => handleDeleteCategory(cat)}
+                            className="text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded shrink-0"
+                            title="Hapus kategori (custom only)"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
-                )}
-              </div>
-            )
-          })}
+                  {/* Subcategories (expandable) */}
+                  {isExpanded && (
+                    <div className="bg-pink-50/50 px-3 py-2 space-y-0.5 border-t border-pink-200/60">
+                      {subs.length === 0 ? (
+                        <p className="text-[10px] text-pink-700/50 italic py-1">
+                          (Belum ada subkategori)
+                        </p>
+                      ) : (
+                        subs.map((sub) => (
+                          <SubcategoryRow
+                            key={`${sub.id}-${sub.name}`}
+                            subcategory={sub}
+                            budget={getDefaultBudget(data.budgets, sub.id)}
+                            investmentBalance={isInvestmentSub(sub) ? getInvestmentBalance(sub.name) : undefined}
+                            editMode={editMode}
+                            onUpdateName={handleUpdateSubcategory}
+                            onDelete={handleDeleteSubcategory}
+                            onSetBudget={handleSetBudget}
+                            onUpdateInvestmentBalance={isInvestmentSub(sub) ? handleUpdateInvestmentBalance : undefined}
+                          />
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
         </div>
       </section>
 
@@ -634,27 +546,47 @@ export default function SetupView({ user, onClose }: Props) {
         <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-[10px] text-amber-800">
           <b>📌 Klik tombol ✏️ Edit untuk:</b>
           <ul className="list-disc list-inside mt-1 space-y-0.5">
-            <li>Ubah saldo awal akun bank (klik ✏️ per akun)</li>
-            <li>Tambah / hapus akun (pilih dari 22 bank options)</li>
-            <li>Tampilkan / sembunyikan akun (toggle)</li>
-            <li>Tambah / hapus kategori & subkategori</li>
-            <li>Set budget default per subkategori (sticky, berlaku semua bulan)</li>
+            <li>Ubah saldo awal akun (klik ✏️ per akun)</li>
+            <li>Tambah / hapus bank & e-wallet</li>
+            <li>Tambah kategori & subkategori custom</li>
+            <li>Set budget default per subkategori (sticky)</li>
+            <li>Edit saldo investasi (auto-link ke akun)</li>
           </ul>
         </div>
       )}
 
       {/* === MODALS === */}
-      {showAddAccount && (
+      {showAddAccountBank && (
         <AddAccountModal
+          mode="bank"
           userId={user.id}
-          bankOptions={bankOptions}
+          bankOptions={getAvailableBanks('bank')}
           existingNames={data.accounts.map(a => a.name)}
-          onClose={() => setShowAddAccount(false)}
+          onClose={() => setShowAddAccountBank(false)}
           onAdd={async (account) => {
             try {
               await addAccount(account)
               await reload()
-              setShowAddAccount(false)
+              setShowAddAccountBank(false)
+            } catch (err: any) {
+              alert('Error: ' + err.message)
+            }
+          }}
+        />
+      )}
+
+      {showAddAccountEwallet && (
+        <AddAccountModal
+          mode="ewallet"
+          userId={user.id}
+          bankOptions={getAvailableBanks('ewallet')}
+          existingNames={data.accounts.map(a => a.name)}
+          onClose={() => setShowAddAccountEwallet(false)}
+          onAdd={async (account) => {
+            try {
+              await addAccount(account)
+              await reload()
+              setShowAddAccountEwallet(false)
             } catch (err: any) {
               alert('Error: ' + err.message)
             }
@@ -705,20 +637,18 @@ export default function SetupView({ user, onClose }: Props) {
 }
 
 // ============================================================
-// SUB-COMPONENT: AccountRow (with edit balance + toggle selected)
+// SUB-COMPONENT: AccountRow (with edit opening balance)
 // ============================================================
 function AccountRow({
   account,
   editMode,
   onUpdateBalance,
   onDelete,
-  onToggleSelected,
 }: {
   account: Account
   editMode: boolean
   onUpdateBalance: (account: Account, newBalance: number) => void
   onDelete: (account: Account) => void
-  onToggleSelected: (account: Account) => void
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [tempBalance, setTempBalance] = useState(String(account.opening_balance))
@@ -771,20 +701,15 @@ function AccountRow({
                 >
                   ✏️
                 </button>
-                <button
-                  onClick={() => onToggleSelected(account)}
-                  className="text-[10px] text-amber-600 hover:bg-amber-100 px-1 py-0.5 rounded"
-                  title="Sembunyikan akun"
-                >
-                  🙈
-                </button>
-                <button
-                  onClick={() => onDelete(account)}
-                  className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded"
-                  title="Hapus akun"
-                >
-                  🗑️
-                </button>
+                {!account.is_protected && (
+                  <button
+                    onClick={() => onDelete(account)}
+                    className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded"
+                    title="Hapus akun"
+                  >
+                    🗑️
+                  </button>
+                )}
               </>
             )}
           </>
@@ -795,27 +720,33 @@ function AccountRow({
 }
 
 // ============================================================
-// SUB-COMPONENT: SubcategoryRow (with inline edit name + budget)
+// SUB-COMPONENT: SubcategoryRow (with budget + investment balance)
 // ============================================================
 function SubcategoryRow({
   subcategory,
   budget,
+  investmentBalance,
   editMode,
   onUpdateName,
   onDelete,
   onSetBudget,
+  onUpdateInvestmentBalance,
 }: {
   subcategory: Subcategory
   budget: number
+  investmentBalance?: number
   editMode: boolean
   onUpdateName: (sub: Subcategory, newName: string) => void
   onDelete: (sub: Subcategory) => void
   onSetBudget: (sub: Subcategory, amount: number) => void
+  onUpdateInvestmentBalance?: (sub: Subcategory, amount: number) => void
 }) {
   const [isEditingName, setIsEditingName] = useState(false)
   const [tempName, setTempName] = useState(subcategory.name)
   const [isEditingBudget, setIsEditingBudget] = useState(false)
   const [tempBudget, setTempBudget] = useState(String(budget))
+  const [isEditingInvestment, setIsEditingInvestment] = useState(false)
+  const [tempInvestment, setTempInvestment] = useState(String(investmentBalance ?? 0))
 
   function saveName() {
     if (tempName.trim() && tempName !== subcategory.name) {
@@ -828,6 +759,12 @@ function SubcategoryRow({
     const num = parseRupiah(tempBudget)
     onSetBudget(subcategory, num)
     setIsEditingBudget(false)
+  }
+
+  function saveInvestment() {
+    const num = parseRupiah(tempInvestment)
+    onUpdateInvestmentBalance?.(subcategory, num)
+    setIsEditingInvestment(false)
   }
 
   return (
@@ -868,51 +805,98 @@ function SubcategoryRow({
         </div>
       )}
 
-      {/* Budget (right side) */}
-      {editMode && isEditingBudget ? (
+      {/* Budget + Investment (right side) */}
+      {editMode && (
         <div className="flex items-center gap-1 shrink-0">
-          <input
-            type="text"
-            inputMode="numeric"
-            value={tempBudget}
-            onChange={(e) => setTempBudget(e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="0"
-            className="w-20 text-right bg-white border border-pink-300 rounded px-2 py-0.5 text-[10px] font-bold"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveBudget()
-              if (e.key === 'Escape') setIsEditingBudget(false)
-            }}
-          />
-          <button
-            onClick={saveBudget}
-            className="text-[10px] text-white bg-emerald-500 hover:bg-emerald-600 px-1.5 py-0.5 rounded font-bold"
-          >
-            ✓
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1 shrink-0">
-          {editMode && (
-            <>
-              <span className="text-[10px] font-bold text-pink-700/80 bg-pink-100 px-1.5 py-0.5 rounded">
-                {budget > 0 ? formatRupiah(budget) : '—'}
-              </span>
-              <button
-                onClick={() => setIsEditingBudget(true)}
-                className="text-[10px] text-emerald-600 hover:bg-emerald-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
-                title="Set budget default"
-              >
-                💰
-              </button>
-              <button
-                onClick={() => onDelete(subcategory)}
-                className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
-                title="Hapus subkategori"
-              >
-                🗑️
-              </button>
-            </>
+          {/* Investment balance (for investment subkategori only) */}
+          {investmentBalance !== undefined && (
+            isEditingInvestment ? (
+              <>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={tempInvestment}
+                  onChange={(e) => setTempInvestment(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  className="w-20 text-right bg-white border border-indigo-300 rounded px-2 py-0.5 text-[10px] font-bold"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveInvestment()
+                    if (e.key === 'Escape') setIsEditingInvestment(false)
+                  }}
+                />
+                <button
+                  onClick={saveInvestment}
+                  className="text-[10px] text-white bg-emerald-500 hover:bg-emerald-600 px-1.5 py-0.5 rounded font-bold"
+                >
+                  ✓
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">
+                  {investmentBalance > 0 ? formatRupiah(investmentBalance) : '—'}
+                </span>
+                <button
+                  onClick={() => setIsEditingInvestment(true)}
+                  className="text-[10px] text-indigo-600 hover:bg-indigo-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
+                  title="Edit saldo investasi"
+                >
+                  💰
+                </button>
+              </>
+            )
+          )}
+
+          {/* Default budget (for non-investment subkategori) */}
+          {investmentBalance === undefined && (
+            isEditingBudget ? (
+              <>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={tempBudget}
+                  onChange={(e) => setTempBudget(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  className="w-20 text-right bg-white border border-pink-300 rounded px-2 py-0.5 text-[10px] font-bold"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveBudget()
+                    if (e.key === 'Escape') setIsEditingBudget(false)
+                  }}
+                />
+                <button
+                  onClick={saveBudget}
+                  className="text-[10px] text-white bg-emerald-500 hover:bg-emerald-600 px-1.5 py-0.5 rounded font-bold"
+                >
+                  ✓
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-[10px] font-bold text-pink-700/80 bg-pink-100 px-1.5 py-0.5 rounded">
+                  {budget > 0 ? formatRupiah(budget) : '—'}
+                </span>
+                <button
+                  onClick={() => setIsEditingBudget(true)}
+                  className="text-[10px] text-emerald-600 hover:bg-emerald-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
+                  title="Set budget default"
+                >
+                  💰
+                </button>
+              </>
+            )
+          )}
+
+          {/* Delete (only for custom subkategori) */}
+          {subcategory.is_custom && (
+            <button
+              onClick={() => onDelete(subcategory)}
+              className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
+              title="Hapus subkategori (custom)"
+            >
+              🗑️
+            </button>
           )}
         </div>
       )}
@@ -921,66 +905,53 @@ function SubcategoryRow({
 }
 
 // ============================================================
-// MODAL: Add Account (template or custom)
+// MODAL: Add Account (Bank or E-wallet, template only)
 // ============================================================
 function AddAccountModal({
+  mode,
   userId,
   bankOptions,
   existingNames,
   onClose,
   onAdd,
 }: {
+  mode: 'bank' | 'ewallet'
   userId: string
   bankOptions: BankOption[]
   existingNames: string[]
   onClose: () => void
   onAdd: (account: Database['public']['Tables']['accounts']['Insert']) => void
 }) {
-  const [mode, setMode] = useState<'template' | 'custom'>('template')
   const [selectedBankId, setSelectedBankId] = useState('')
-  const [customName, setCustomName] = useState('')
-  const [customType, setCustomType] = useState<'bank' | 'ewallet' | 'cash' | 'investment'>('bank')
   const [openingBalance, setOpeningBalance] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    let name = ''
-    let type: 'bank' | 'ewallet' | 'cash' | 'investment' = 'bank'
-    let sortOrder = 99
-
-    if (mode === 'template') {
-      const bank = bankOptions.find(b => b.id === selectedBankId)
-      if (!bank) {
-        alert('Pilih bank dulu')
-        return
-      }
-      name = bank.name
-      type = bank.type as any
-      sortOrder = bank.sort_order
-    } else {
-      name = customName.trim()
-      type = customType
-      if (!name) {
-        alert('Nama akun wajib diisi')
-        return
-      }
+    const bank = bankOptions.find(b => b.id === selectedBankId)
+    if (!bank) {
+      alert('Pilih bank dulu')
+      return
     }
 
-    if (existingNames.some(n => n.toLowerCase() === name.toLowerCase())) {
-      alert(`Akun "${name}" sudah ada. Hapus dulu atau pakai nama lain.`)
+    if (existingNames.some(n => n.toLowerCase() === bank.name.toLowerCase())) {
+      alert(`Akun "${bank.name}" sudah ada.`)
       return
     }
 
     onAdd({
       user_id: userId,
-      name,
-      type,
+      name: bank.name,
+      type: mode as 'bank' | 'ewallet',
       opening_balance: parseRupiah(openingBalance),
-      sort_order: sortOrder,
+      sort_order: bank.sort_order,
       is_active: true,
       is_selected: true,
+      is_protected: false,
     })
   }
+
+  const label = mode === 'bank' ? 'Bank' : 'E-wallet'
+  const icon = mode === 'bank' ? '🏦' : '📱'
 
   return (
     <div
@@ -989,7 +960,9 @@ function AddAccountModal({
     >
       <div className="bg-white/95 w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto animate-pop">
         <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 sticky top-0">
-          <h3 className="text-base font-bold text-white tracking-wide drop-shadow">🏦 Tambah Akun</h3>
+          <h3 className="text-base font-bold text-white tracking-wide drop-shadow">
+            {icon} Tambah {label}
+          </h3>
           <button
             onClick={onClose}
             className="w-9 h-9 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center"
@@ -999,106 +972,33 @@ function AddAccountModal({
         </div>
 
         <form onSubmit={handleSubmit} className="px-4 py-4 space-y-3">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setMode('template')}
-              className={cn(
-                'flex-1 py-2 rounded-xl text-xs font-bold border-2 transition',
-                mode === 'template'
-                  ? 'border-pink-500 bg-pink-50 text-pink-900'
-                  : 'border-gray-200 text-gray-500'
-              )}
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-pink-900/70 mb-1">
+              Pilih {label}
+            </label>
+            <select
+              value={selectedBankId}
+              onChange={(e) => setSelectedBankId(e.target.value)}
+              required
+              className="w-full bg-white/80 border border-pink-200 rounded-xl px-3 py-2 text-sm"
             >
-              📋 Dari Template
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('custom')}
-              className={cn(
-                'flex-1 py-2 rounded-xl text-xs font-bold border-2 transition',
-                mode === 'custom'
-                  ? 'border-pink-500 bg-pink-50 text-pink-900'
-                  : 'border-gray-200 text-gray-500'
+              <option value="" disabled selected hidden>-- Pilih {label} --</option>
+              {bankOptions.length === 0 ? (
+                <option disabled>Semua {label} udah dipilih</option>
+              ) : (
+                bankOptions.map(b => (
+                  <option key={b.id} value={b.id}>
+                    {b.is_popular ? '⭐ ' : ''}{b.name}
+                  </option>
+                ))
               )}
-            >
-              ✏️ Custom
-            </button>
+            </select>
+            {bankOptions.length === 0 && (
+              <p className="text-[10px] text-amber-700 mt-1">
+                ⚠️ Semua {label} dari template udah lu pilih. Hapus salah satu dulu kalau mau ganti.
+              </p>
+            )}
           </div>
-
-          {mode === 'template' && (
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-pink-900/70 mb-1">
-                Pilih Bank / E-wallet
-              </label>
-              <select
-                value={selectedBankId}
-                onChange={(e) => setSelectedBankId(e.target.value)}
-                required
-                className="w-full bg-white/80 border border-pink-200 rounded-xl px-3 py-2 text-sm"
-              >
-                <option value="" disabled selected hidden>-- Pilih Bank --</option>
-                <optgroup label="🏦 Bank Umum">
-                  {bankOptions.filter(b => b.category === 'major-bank').map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.is_popular ? '⭐ ' : ''}{b.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="💻 Bank Digital">
-                  {bankOptions.filter(b => b.category === 'digital-bank').map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.is_popular ? '⭐ ' : ''}{b.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="📱 E-wallet">
-                  {bankOptions.filter(b => b.category === 'ewallet').map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.is_popular ? '⭐ ' : ''}{b.name}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="💵 Cash">
-                  {bankOptions.filter(b => b.category === 'cash').map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </optgroup>
-              </select>
-            </div>
-          )}
-
-          {mode === 'custom' && (
-            <>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-pink-900/70 mb-1">
-                  Nama Akun
-                </label>
-                <input
-                  type="text"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="Mis. Bank Daerah, Reksadana XXX"
-                  required
-                  className="w-full bg-white/80 border border-pink-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-pink-900/70 mb-1">
-                  Tipe Akun
-                </label>
-                <select
-                  value={customType}
-                  onChange={(e) => setCustomType(e.target.value as any)}
-                  className="w-full bg-white/80 border border-pink-200 rounded-xl px-3 py-2 text-sm"
-                >
-                  {ACCOUNT_TYPES.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
 
           <div>
             <label className="block text-[10px] font-bold uppercase text-pink-900/70 mb-1">
@@ -1121,9 +1021,10 @@ function AddAccountModal({
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm text-sm mt-2"
+            disabled={bankOptions.length === 0}
+            className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm text-sm mt-2"
           >
-            ➕ Tambah Akun
+            ➕ Tambah {label}
           </button>
         </form>
       </div>
@@ -1132,7 +1033,7 @@ function AddAccountModal({
 }
 
 // ============================================================
-// MODAL: Add Category
+// MODAL: Add Category (custom)
 // ============================================================
 function AddCategoryModal({
   userId,
@@ -1164,7 +1065,7 @@ function AddCategoryModal({
       name: name.trim(),
       type,
       icon,
-      sort_order: 99,
+      sort_order: 99, // Custom category (sort_order > 12)
       is_active: true,
     })
   }
@@ -1240,7 +1141,7 @@ function AddCategoryModal({
 }
 
 // ============================================================
-// MODAL: Add Subcategory
+// MODAL: Add Subcategory (custom)
 // ============================================================
 function AddSubcategoryModal({
   userId,
@@ -1273,6 +1174,7 @@ function AddSubcategoryModal({
       name: name.trim(),
       sort_order: 99,
       is_active: true,
+      is_custom: true, // ← Mark as custom (can be deleted)
     })
   }
 

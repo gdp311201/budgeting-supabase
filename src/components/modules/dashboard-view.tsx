@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { getDashboard, type DashboardData } from '@/lib/api/dashboard'
 import { formatRupiah, getCurrentMonth, getCurrentYear } from '@/lib/utils/format'
 
 interface Props {
   user: User
-  onLongPressAsset: () => void
 }
 
 const BULAN_LIST = [
@@ -15,28 +14,12 @@ const BULAN_LIST = [
   'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER',
 ]
 
-export default function DashboardView({ user, onLongPressAsset }: Props) {
+export default function DashboardView({ user }: Props) {
   const [month, setMonth] = useState(getCurrentMonth())
   const [year, setYear] = useState(getCurrentYear())
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Long-press detection on asset card
-  const pressTimer = useRef<NodeJS.Timeout | null>(null)
-  const assetCardRef = useRef<HTMLDivElement>(null)
-
-  function startPress() {
-    pressTimer.current = setTimeout(() => {
-      onLongPressAsset()
-    }, 5000)
-  }
-  function cancelPress() {
-    if (pressTimer.current) {
-      clearTimeout(pressTimer.current)
-      pressTimer.current = null
-    }
-  }
 
   async function loadDashboard() {
     setLoading(true)
@@ -114,17 +97,9 @@ export default function DashboardView({ user, onLongPressAsset }: Props) {
         </div>
       )}
 
-      {/* Asset Card (long-press to open Setup) */}
+      {/* Asset Card */}
       {data && (
-        <div
-          ref={assetCardRef}
-          onMouseDown={startPress}
-          onMouseUp={cancelPress}
-          onMouseLeave={cancelPress}
-          onTouchStart={startPress}
-          onTouchEnd={cancelPress}
-          className="relative overflow-hidden bg-gradient-to-br from-pink-500/90 via-rose-500/90 to-pink-600/90 rounded-3xl p-5 text-white shadow-lg border border-white/30 cursor-pointer select-none"
-        >
+        <div className="relative overflow-hidden bg-gradient-to-br from-pink-500/90 via-rose-500/90 to-pink-600/90 rounded-3xl p-5 text-white shadow-lg border border-white/30">
           <div className="relative z-10">
             <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-pink-50 bg-white/15 border border-white/25 backdrop-blur-sm px-2.5 py-1 rounded-full">
               Total Aset Bersih
@@ -134,9 +109,6 @@ export default function DashboardView({ user, onLongPressAsset }: Props) {
             </div>
             <p className="text-[10px] text-pink-100/90 mt-1 font-medium">
               🌸 {data.quote}
-            </p>
-            <p className="text-[9px] text-pink-100/60 mt-2 italic">
-              💡 Long-press kartu ini untuk Setup Budget
             </p>
           </div>
         </div>

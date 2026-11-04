@@ -136,16 +136,27 @@ export default function BudgetingApp({
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main content — render semua views sekaligus, hide yang nggak aktif */}
+      {/* Ini bikin state persist saat pindah tab (component nggak di-unmount) */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
-        {activeTab === 'dashboard' && (
+        <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
           <DashboardView user={user} />
-        )}
-        {activeTab === 'input' && <InputView user={user} />}
-        {activeTab === 'mutasi' && <MutasiView />}
-        {activeTab === 'receipt' && <ReceiptView />}
-        {activeTab === 'search' && <SearchView />}
-        {activeTab === 'setting' && <SetupView user={user} onClose={() => setActiveTab('dashboard')} />}
+        </div>
+        <div className={activeTab === 'input' ? 'block' : 'hidden'}>
+          <InputView user={user} />
+        </div>
+        <div className={activeTab === 'mutasi' ? 'block' : 'hidden'}>
+          <MutasiView />
+        </div>
+        <div className={activeTab === 'receipt' ? 'block' : 'hidden'}>
+          <ReceiptView />
+        </div>
+        <div className={activeTab === 'search' ? 'block' : 'hidden'}>
+          <SearchView />
+        </div>
+        <div className={activeTab === 'setting' ? 'block' : 'hidden'}>
+          <SetupView user={user} onClose={() => setActiveTab('dashboard')} />
+        </div>
       </main>
 
       {/* Floating bottom navigation (6 tabs including Setting) */}

@@ -229,18 +229,17 @@ export default function SetupView({ user, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-pink-950/40 backdrop-blur-[5px]"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md overflow-y-auto"
       onClick={onClose}
     >
     <div
-      className="absolute inset-x-0 top-0 mx-auto max-w-md min-h-screen bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col"
+      className="w-full max-w-md bg-white/20 backdrop-blur-2xl saturate-150 shadow-2xl flex flex-col rounded-3xl border border-white/30"
       onClick={(e) => e.stopPropagation()}
-      style={{ maxHeight: '100dvh' }}
+      style={{ maxHeight: '90vh' }}
     >
       {/* Sticky header with Close button */}
       <div
-        className="px-4 pt-4 pb-2 border-b border-pink-200/50 flex items-center justify-between shrink-0 bg-gradient-to-r from-pink-500 to-rose-500"
-        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+        className="px-4 py-3 border-b border-white/20 flex items-center justify-between shrink-0 bg-gradient-to-r from-pink-500/80 to-rose-500/80 rounded-t-3xl"
       >
         <div>
           <h1 className="text-base font-bold text-white tracking-wide">⚙️ SETUP BUDGET</h1>

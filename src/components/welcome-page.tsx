@@ -58,17 +58,13 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
             <span className="text-pink-400">→</span>
           </button>
 
-          {/* Setting */}
+          {/* Setting — now smaller, below the main buttons */}
           <button
             onClick={() => onNavigate('setting')}
-            className="w-full bg-white/70 backdrop-blur-md hover:bg-white/90 text-pink-950 font-bold py-4 px-6 rounded-2xl shadow-lg border border-pink-200/60 transition hover:scale-[1.02] flex items-center gap-3"
+            className="w-full bg-transparent hover:bg-white/30 text-pink-700/60 font-medium py-2 px-4 rounded-xl transition text-[11px] flex items-center justify-center gap-1.5"
           >
-            <span className="text-2xl">⚙️</span>
-            <div className="text-left flex-1">
-              <p className="text-sm font-bold">Setting</p>
-              <p className="text-[10px] text-pink-700/60">Atur akun, kategori & budget</p>
-            </div>
-            <span className="text-pink-400">→</span>
+            <span className="text-sm">⚙️</span>
+            <span>Setup Budget</span>
           </button>
         </div>
 

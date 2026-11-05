@@ -194,6 +194,7 @@ export default function InputView({ user }: Props) {
             onChange={(e) => setDate(e.target.value)}
             required
             className="w-full bg-white/60 border border-pink-200 rounded-xl px-3.5 py-2 font-medium text-sm"
+            style={{ width: '100%', WebkitAppearance: 'none' }}
           />
         </div>
 
@@ -258,22 +259,20 @@ export default function InputView({ user }: Props) {
         {/* Nominal */}
         <div>
           <label className="block text-[11px] font-semibold uppercase tracking-wider text-pink-900/70 mb-1">
-            Nominal (Rp)
+            Nominal
           </label>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={nominal}
-            onChange={handleNominalChange}
-            placeholder="0"
-            required
-            className="w-full bg-white/60 border border-pink-200 rounded-xl px-3.5 py-2 font-bold text-sm text-right"
-          />
-          {nominal && (
-            <p className="text-[10px] text-pink-700/60 mt-1 px-1">
-              = {formatRupiah(parseRupiah(nominal))}
-            </p>
-          )}
+          <div className="relative">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-pink-700/60">Rp</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={nominal ? Number(nominal).toLocaleString('id-ID') : ''}
+              onChange={handleNominalChange}
+              placeholder="0"
+              required
+              className="w-full bg-white/60 border border-pink-200 rounded-xl pl-10 pr-3.5 py-2 font-bold text-sm text-right"
+            />
+          </div>
         </div>
 
         {/* Akun Asal (untuk semua transaksi) */}

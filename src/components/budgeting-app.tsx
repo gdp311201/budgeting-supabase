@@ -12,6 +12,7 @@ import ReceiptView from '@/components/modules/receipt-view'
 import SearchView from '@/components/modules/search-view'
 import SetupView from '@/components/modules/setup-view'
 import ThemePickerModal from '@/components/theme-picker-modal'
+import OnboardingModal from '@/components/onboarding-modal'
 import SetupRequired from '@/components/setup-required'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
@@ -54,8 +55,11 @@ export default function BudgetingApp({
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Client-side profile state (fixes stale data bug)
-  const [profile, setProfile] = useState<Profile | null>(initialProfile)
+  // Check if user needs onboarding (no full_name set)
+  // Use useState initializer — check on first render, not in useEffect
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => !initialProfile?.full_name
+  )
 
   // Fetch updated profile from client when refreshKey changes
   useEffect(() => {
@@ -172,7 +176,7 @@ export default function BudgetingApp({
       {/* Main content — render semua views, hide yang nggak aktif */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
         <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
-          <DashboardView user={user} mascotEmoji={mascotEmoji} />
+          <DashboardView user={user} mascotEmoji={mascotEmoji} nickname={profile?.full_name} />
         </div>
         <div className={activeTab === 'input' ? 'block' : 'hidden'}>
           <InputView user={user} />
@@ -216,6 +220,17 @@ export default function BudgetingApp({
         onClose={() => setShowThemePicker(false)}
         onApply={() => setRefreshKey((k) => k + 1)}
       />
+
+      {/* Onboarding modal (first login — ask for nickname) */}
+      {showOnboarding && (
+        <OnboardingModal
+          userId={user.id}
+          onComplete={(nickname) => {
+            setProfile(prev => prev ? { ...prev, full_name: nickname } : prev)
+            setShowOnboarding(false)
+          }}
+        />
+      )}
     </div>
   )
 }

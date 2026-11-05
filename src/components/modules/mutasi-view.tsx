@@ -276,24 +276,24 @@ export default function MutasiView() {
                       {tx.display_label || tx.subkategori || tx.kategori}
                     </p>
                     <div className="text-right">
-                      {tx.income != null && tx.income > 0 && (
+                      {tx.income != null && tx.income !== 0 && (
                         <span className="text-xs text-emerald-600 font-bold">
-                          +{formatRupiah(tx.income)}
+                          +{formatRupiah(Math.abs(tx.income))}
                         </span>
                       )}
-                      {tx.expense != null && tx.expense > 0 && (
+                      {tx.expense != null && tx.expense !== 0 && (
                         <span className="text-xs text-rose-600 font-bold">
-                          -{formatRupiah(tx.expense)}
+                          -{formatRupiah(Math.abs(tx.expense))}
                         </span>
                       )}
-                      {tx.mutasi_in != null && tx.mutasi_in > 0 && (
+                      {tx.mutasi_in != null && tx.mutasi_in !== 0 && (
                         <span className="text-xs text-blue-600 font-bold">
-                          +{formatRupiah(tx.mutasi_in)}
+                          +{formatRupiah(Math.abs(tx.mutasi_in))}
                         </span>
                       )}
-                      {tx.mutasi_out != null && tx.mutasi_out > 0 && (
+                      {tx.mutasi_out != null && tx.mutasi_out !== 0 && (
                         <span className="text-xs text-purple-600 font-bold">
-                          -{formatRupiah(tx.mutasi_out)}
+                          -{formatRupiah(Math.abs(tx.mutasi_out))}
                         </span>
                       )}
                     </div>

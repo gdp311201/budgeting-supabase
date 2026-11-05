@@ -16,9 +16,9 @@ export interface ReceiptData {
     totalSaving: number
   }
   details: {
-    income: { kategori: string; subKategori: string; nominal: number }[]
-    investment: { kategori: string; subKategori: string; nominal: number }[]
-    outcome: { kategori: string; subKategori: string; nominal: number }[]
+    income: { kategori: string; kategori_icon: string | null; subKategori: string; nominal: number }[]
+    investment: { kategori: string; kategori_icon: string | null; subKategori: string; nominal: number }[]
+    outcome: { kategori: string; kategori_icon: string | null; subKategori: string; nominal: number }[]
   }
   message?: string
 }

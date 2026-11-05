@@ -63,9 +63,9 @@ export default function FeedbackModal({ open, onClose, waLink }: Props) {
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/85 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/50">
+      <div className="bg-white/75 backdrop-blur-2xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/60">
         {/* Header — compact */}
-        <div className="px-5 py-3 border-b border-pink-200/40 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 rounded-t-3xl shrink-0">
+        <div className="px-5 py-3 border-b border-pink-200/50 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 rounded-t-3xl shrink-0">
           <div>
             <h3 className="text-sm font-bold text-white tracking-wide drop-shadow-lg">💬 Kirim Feedback</h3>
             <p className="text-[10px] text-white/90 font-semibold mt-0.5 drop-shadow">Saran & kritik kamu sangat berharga</p>

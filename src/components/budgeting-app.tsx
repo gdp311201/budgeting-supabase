@@ -150,6 +150,8 @@ export default function BudgetingApp({
         onComplete={(nickname) => {
           setProfile(prev => prev ? { ...prev, full_name: nickname } : prev)
           setShowOnboarding(false)
+          // After onboarding, go to PIN setup
+          setAppState('pin-setup')
         }}
       />
     )

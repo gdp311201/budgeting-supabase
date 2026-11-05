@@ -54,6 +54,9 @@ export default function BudgetingApp({
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
+  // Client-side profile state (fixes stale data bug)
+  const [profile, setProfile] = useState<Profile | null>(initialProfile)
+
   // Check if user needs onboarding (no full_name set)
   // Use useState initializer — check on first render, not in useEffect
   const [showOnboarding, setShowOnboarding] = useState(

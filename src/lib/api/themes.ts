@@ -89,13 +89,14 @@ export async function selectTheme(themeId: string, isPremium: boolean): Promise<
   const { data: userData } = await supabase.auth.getUser()
   if (!userData.user) throw new Error('Not authenticated')
 
+  // Update profile — DON'T override wallpaper_url (keep mascot wallpaper)
   const { error: updateError } = await supabase
     .from('profiles')
     .update({
       selected_theme_id: themeId,
       palette: theme.palette,
       glass_settings: theme.glass_settings,
-      wallpaper_url: theme.wallpaper_url,
+      // wallpaper_url is NOT updated here — it's tied to mascot selection
     })
     .eq('id', userData.user.id)
 

@@ -16,6 +16,7 @@ import OnboardingModal from '@/components/onboarding-modal'
 import PinLockScreen from '@/components/pin-lock-screen'
 import WelcomePage from '@/components/welcome-page'
 import CaraPakai from '@/components/cara-pakai'
+import FeedbackModal from '@/components/feedback-modal'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -159,6 +160,7 @@ export default function BudgetingApp({
   // Main app state (tabs + setup)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [showSetup, setShowSetup] = useState(appState === 'setting')
+  const [showFeedback, setShowFeedback] = useState(false)
 
   // ===== ONBOARDING ACTIVE =====
   if (showOnboarding) {
@@ -279,6 +281,29 @@ export default function BudgetingApp({
         </svg>
       </button>
 
+      {/* Floating Help button (top-left) → Cara Pakai */}
+      <button
+        onClick={() => setAppState('cara-pakai')}
+        className="fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white/70 backdrop-blur-md border border-pink-200/60 shadow-lg flex items-center justify-center hover:scale-110 transition"
+        style={{ top: 'max(env(safe-area-inset-top, 0px), 16px)' }}
+        aria-label="Cara Pakai"
+        title="Cara Pakai"
+      >
+        💡
+      </button>
+
+      {/* Floating Feedback button (bottom-right, above WhatsApp) */}
+      <button
+        onClick={() => setShowFeedback(true)}
+        className="fixed bottom-40 right-4 z-40 w-12 h-12 rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg flex items-center justify-center transition hover:scale-110"
+        aria-label="Kirim Feedback"
+        title="Kirim Feedback / Saran"
+      >
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+      </button>
+
       {/* Floating WhatsApp button */}
       <a
         href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App"
@@ -324,6 +349,13 @@ export default function BudgetingApp({
         open={showThemePicker}
         onClose={() => setShowThemePicker(false)}
         onApply={() => setRefreshKey((k) => k + 1)}
+      />
+
+      {/* Feedback modal */}
+      <FeedbackModal
+        open={showFeedback}
+        onClose={() => setShowFeedback(false)}
+        waLink="https://wa.me/6281575859792?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App"
       />
     </div>
   )

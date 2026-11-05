@@ -28,15 +28,15 @@ export const metadata: Metadata = {
     "Supabase",
   ],
   authors: [{ name: "Budgeting Master Sync" }],
-  manifest: "/manifest.webmanifest",
+  // Manifest is set dynamically per user in budgeting-app.tsx
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Budgeting",
   },
   icons: {
-    icon: "/icons/icon-192.png",
-    apple: "/icons/icon-192.png",
+    // Icons are set dynamically per user in budgeting-app.tsx
+    // Default favicon is set via /public folder
   },
   openGraph: {
     title: "Budgeting Master Sync",

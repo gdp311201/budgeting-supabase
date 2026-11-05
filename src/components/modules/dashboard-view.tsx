@@ -94,9 +94,10 @@ export default function DashboardView({ user }: Props) {
         </div>
       )}
 
+      {/* Loading placeholder */}
       {!data && !error && (
         <div className="text-center py-12 bg-white/40 rounded-2xl border border-pink-200/60">
-          <div className="text-4xl mb-2">🐘</div>
+          <div className="text-4xl mb-2">{user.email?.split('@')[0]?.charAt(0).toUpperCase() ?? '🐘'}</div>
           <p className="text-xs font-semibold text-pink-900/70">Belum ada data dimuat</p>
           <p className="text-[10px] text-pink-900/50 mt-1">Pilih periode di atas, lalu klik <b>Tampilkan Dashboard</b></p>
         </div>
@@ -109,8 +110,11 @@ export default function DashboardView({ user }: Props) {
             <h3 className="text-xs font-bold text-emerald-950/80 uppercase tracking-wider">Kas & Bank</h3>
             <span className="text-xs font-extrabold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-200/80">{formatRupiah(data.bank.total)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 mb-2">
-            {data.bank.items.filter(a => a.saldo !== 0 || true).slice(0, 6).map((item, idx) => (
+          <div className={cn(
+            'grid gap-2 mb-2',
+            data.bank.items.length <= 2 ? 'grid-cols-2' : 'grid-cols-3'
+          )}>
+            {data.bank.items.map((item, idx) => (
               <div key={idx} className="bg-white/50 border border-pink-100/80 p-2 rounded-xl text-center">
                 <span className="block text-[9px] font-bold text-pink-900/70 truncate">{item.name}</span>
                 <span className="text-xs font-bold text-pink-950">{formatRupiah(item.saldo)}</span>
@@ -127,7 +131,10 @@ export default function DashboardView({ user }: Props) {
             <h3 className="text-xs font-bold text-indigo-950/80 uppercase tracking-wider">Aset Investasi</h3>
             <span className="text-xs font-extrabold text-indigo-800 bg-indigo-100/70 px-2 py-0.5 rounded-md border border-indigo-200/80">{formatRupiah(data.investment.total)}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 mb-2">
+          <div className={cn(
+            'grid gap-2 mb-2',
+            data.investment.items.filter(a => a.saldo > 0).length <= 2 ? 'grid-cols-2' : 'grid-cols-3'
+          )}>
             {data.investment.items.filter(a => a.saldo > 0).map((item, idx) => (
               <div key={idx} className="bg-white/50 border border-indigo-100/80 p-2 rounded-xl text-center">
                 <span className="block text-[8px] font-bold text-indigo-900/70 truncate">{item.name}</span>

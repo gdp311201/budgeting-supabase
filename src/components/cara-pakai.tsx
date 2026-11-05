@@ -6,6 +6,33 @@ interface Props {
 
 const SECTIONS = [
   {
+    icon: '🔐',
+    title: 'PIN Keamanan',
+    desc: 'Amankan app kamu dengan PIN 6 digit',
+    items: [
+      'Saat pertama login, kamu akan diminta setup PIN 6 digit',
+      'Setiap kali buka app, masukkan PIN untuk unlock',
+      'PIN disimpan di perangkat (localStorage) — aman & terenkripsi',
+      'Kalau salah PIN 3x, otomatis sign out untuk keamanan',
+      'Lupa PIN? Klik "Lupa PIN? Login ulang" di lock screen',
+      'Login ulang pakai Google → setelah berhasil, set PIN baru',
+      'Data kamu tetap aman saat reset PIN (tidak hilang)',
+      'PIN berlaku per perangkat — HP dan laptop bisa beda PIN',
+    ],
+  },
+  {
+    icon: '👋',
+    title: 'Welcome Page',
+    desc: 'Halaman utama setelah PIN unlock',
+    items: [
+      'Setelah unlock PIN, kamu masuk ke Welcome Page',
+      '3 menu tersedia: Dashboard, Cara Pakai, Setting',
+      'Dashboard → langsung ke ringkasan keuangan',
+      'Cara Pakai → panduan lengkap (halaman ini)',
+      'Setting → atur akun bank, kategori & budget',
+    ],
+  },
+  {
     icon: '📊',
     title: 'Dashboard',
     desc: 'Lihat ringkasan keuangan bulanan kamu',

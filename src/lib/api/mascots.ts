@@ -64,8 +64,9 @@ export async function getMascots(): Promise<{ mascots: MascotWithAccess[]; isPre
 
 /**
  * Select a mascot — Optimized: 1 API call.
+ * Also updates wallpaper_url from mascot data.
  */
-export async function selectMascot(mascotId: string): Promise<{ success: boolean; error?: string }> {
+export async function selectMascot(mascotId: string, wallpaperUrl?: string | null): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient()
 
   const { data: userData } = await supabase.auth.getUser()
@@ -76,6 +77,7 @@ export async function selectMascot(mascotId: string): Promise<{ success: boolean
     .update({
       selected_mascot_id: mascotId,
       icon_name: mascotId,
+      wallpaper_url: wallpaperUrl ?? null,
     })
     .eq('id', userData.user.id)
 

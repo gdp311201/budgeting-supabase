@@ -229,43 +229,49 @@ export default function SetupView({ user, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-center bg-pink-950/40 backdrop-blur-[5px] overflow-y-auto"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      className="fixed inset-0 z-50 bg-pink-950/40 backdrop-blur-[5px]"
+      onClick={onClose}
     >
-    <div className="w-full max-w-md min-h-full px-3 py-4 flex flex-col">
-      {/* Close button — fixed at top */}
-      <button
-        onClick={onClose}
-        className="self-end mb-2 w-9 h-9 rounded-full bg-white/80 border border-pink-200 text-pink-700 font-bold flex items-center justify-center shadow-sm z-10"
-        aria-label="Tutup"
+    <div
+      className="absolute inset-x-0 top-0 mx-auto max-w-md min-h-screen bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col"
+      onClick={(e) => e.stopPropagation()}
+      style={{ maxHeight: '100dvh' }}
+    >
+      {/* Sticky header with Close button */}
+      <div
+        className="px-4 pt-4 pb-2 border-b border-pink-200/50 flex items-center justify-between shrink-0 bg-gradient-to-r from-pink-500 to-rose-500"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
       >
-        ✕
-      </button>
-
-      <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl flex-1 overflow-hidden flex flex-col">
-      {/* Header with Edit Mode Toggle */}
-      <div className="px-4 pt-4 pb-2 border-b border-pink-200/50 flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-base font-bold text-pink-950/80 tracking-wide">⚙️ SETUP BUDGET</h1>
-          <p className="text-[11px] text-pink-800/60 font-medium">
-            Atur akun, kategori & budget bulanan
-          </p>
+          <h1 className="text-base font-bold text-white tracking-wide">⚙️ SETUP BUDGET</h1>
+          <p className="text-[11px] text-white/90 font-medium">Atur akun, kategori & budget bulanan</p>
         </div>
+        <button
+          onClick={onClose}
+          className="w-9 h-9 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center shrink-0"
+          aria-label="Tutup"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Edit Mode Toggle bar */}
+      <div className="px-4 py-2 border-b border-pink-200/50 shrink-0 bg-white/80">
         <button
           onClick={() => setEditMode(!editMode)}
           className={cn(
-            'px-3 py-1.5 rounded-xl text-xs font-bold transition',
+            'w-full py-2 rounded-xl text-xs font-bold transition',
             editMode
               ? 'bg-emerald-500 text-white shadow-md'
               : 'bg-pink-100 text-pink-900 hover:bg-pink-200'
           )}
         >
-          {editMode ? '✓ Selesai' : '✏️ Edit'}
+          {editMode ? '✓ Selesai Edit' : '✏️ Edit Data'}
         </button>
       </div>
 
       {/* Scrollable body */}
-      <div className="overflow-y-auto px-4 py-3 flex-1">
+      <div className="overflow-y-auto px-4 py-3 flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
       {/* === SECTION: REKAP ALOKASI === */}
       {rekapAlokasi && (
         <section className="rounded-2xl p-3 border border-amber-300/60 shadow-sm bg-amber-50/60 backdrop-blur-sm">
@@ -622,8 +628,7 @@ export default function SetupView({ user, onClose }: Props) {
           }}
         />
       )}
-      </div>{/* End scrollable body */}
-      </div>{/* End modal card */}
+      </div>
     </div>
     </div>
   )

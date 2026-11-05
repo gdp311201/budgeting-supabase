@@ -172,7 +172,7 @@ export default function BudgetingApp({
       {/* Main content — render semua views, hide yang nggak aktif */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
         <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
-          <DashboardView user={user} />
+          <DashboardView user={user} mascotEmoji={mascotEmoji} />
         </div>
         <div className={activeTab === 'input' ? 'block' : 'hidden'}>
           <InputView user={user} />

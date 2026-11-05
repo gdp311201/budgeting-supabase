@@ -15,7 +15,8 @@ export interface ThemeWithAccess extends Theme {
 const RESTRICTED_MASCOT_IDS = ['elephant']
 
 // VIP themes that are restricted to specific emails (via theme_whitelist table)
-const VIP_THEME_IDS = ['elephant-pink']
+// Currently empty — elephant-pink is now public premium (not VIP restricted)
+const VIP_THEME_IDS: string[] = []
 
 /**
  * Get all themes + user's premium status + VIP whitelist.

@@ -2,7 +2,7 @@
 
 interface Props {
   nickname: string | null
-  onNavigate: (view: 'dashboard' | 'cara-pakai' | 'setting') => void
+  onNavigate: (view: 'dashboard' | 'cara-pakai') => void
 }
 
 const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
@@ -30,7 +30,7 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
           </p>
         </div>
 
-        {/* 3 Menu Buttons */}
+        {/* 2 Menu Buttons */}
         <div className="space-y-3">
           {/* Dashboard */}
           <button
@@ -56,15 +56,6 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
               <p className="text-[10px] text-pink-700/60">Panduan lengkap menggunakan app</p>
             </div>
             <span className="text-pink-400">→</span>
-          </button>
-
-          {/* Setting — now smaller, below the main buttons */}
-          <button
-            onClick={() => onNavigate('setting')}
-            className="w-full bg-transparent hover:bg-white/30 text-pink-700/60 font-medium py-2 px-4 rounded-xl transition text-[11px] flex items-center justify-center gap-1.5"
-          >
-            <span className="text-sm">⚙️</span>
-            <span>Setup Budget</span>
           </button>
         </div>
 

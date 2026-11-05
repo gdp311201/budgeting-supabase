@@ -271,7 +271,7 @@ export default function SetupView({ user, onClose }: Props) {
       </div>
 
       {/* Scrollable body */}
-      <div className="overflow-y-auto px-4 py-3 flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="overflow-y-auto px-4 py-4 flex-1 space-y-4" style={{ WebkitOverflowScrolling: 'touch' }}>
       {/* === SECTION: REKAP ALOKASI === */}
       {rekapAlokasi && (
         <section className="rounded-2xl p-3 border border-amber-300/60 shadow-sm bg-amber-50/60 backdrop-blur-sm">

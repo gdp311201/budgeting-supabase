@@ -13,7 +13,6 @@ import SearchView from '@/components/modules/search-view'
 import SetupView from '@/components/modules/setup-view'
 import ThemePickerModal from '@/components/theme-picker-modal'
 import OnboardingModal from '@/components/onboarding-modal'
-import SetupRequired from '@/components/setup-required'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']

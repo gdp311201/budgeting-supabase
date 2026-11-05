@@ -5,8 +5,6 @@ interface Props {
   onNavigate: (view: 'dashboard' | 'cara-pakai' | 'setting') => void
 }
 
-const GROWSPHERE_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/Growsphere%20Logo%20with%20Leaf%20or%20Arrow%20Icon%20(1).png'
-
 export default function WelcomePage({ nickname, onNavigate }: Props) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative">
@@ -15,24 +13,22 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
       <div className="wallpaper-veil" aria-hidden="true" />
 
       <div className="relative z-10 w-full max-w-sm text-center space-y-6">
-        {/* Greeting with Growsphere Logo */}
+        {/* GDP Text Logo */}
         <div>
-          <div className="w-[60px] h-[60px] mx-auto mb-2">
-            <img
-              src={GROWSPHERE_LOGO}
-              alt="Growsphere"
-              className="w-full h-full object-contain drop-shadow-lg"
-              style={{ filter: 'drop-shadow(0 0 12px rgba(236, 72, 153, 0.4))' }}
-            />
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-pink-700/70">
-            Selamat Datang
-          </p>
-          <h1 className="text-2xl font-bold text-pink-950 mt-1">
-            Hi, {nickname ?? 'Babe'}! 👋
+          <h1
+            className="text-5xl font-black tracking-[0.15em] mb-1"
+            style={{
+              background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 50%, #ec4899 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 2px 8px rgba(236, 72, 153, 0.3))',
+            }}
+          >
+            GDP
           </h1>
-          <p className="text-xs text-pink-800/60 mt-2">
-            Mau mulai apa hari ini?
+          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-pink-700/60">
+            Personal Budgeting
           </p>
         </div>
 

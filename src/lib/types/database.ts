@@ -338,6 +338,7 @@ export type Database = {
           emoji: string
           description: string | null
           icon_url: string | null
+          wallpaper_url: string | null
           vibe: string
           is_premium: boolean
           is_active: boolean
@@ -350,6 +351,7 @@ export type Database = {
           emoji: string
           description?: string | null
           icon_url?: string | null
+          wallpaper_url?: string | null
           vibe: string
           is_premium?: boolean
           is_active?: boolean
@@ -361,6 +363,7 @@ export type Database = {
           emoji?: string
           description?: string | null
           icon_url?: string | null
+          wallpaper_url?: string | null
           vibe?: string
           is_premium?: boolean
           is_active?: boolean

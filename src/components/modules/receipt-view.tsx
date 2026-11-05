@@ -328,7 +328,7 @@ function ReceiptGroup({
         >
           <div className="pr-2 flex-1 min-w-0">
             <div className="font-bold text-gray-800 truncate">
-              {item.kategori_icon ? `${item.kategori_icon} ` : ''}{item.subKategori || item.kategori}
+              {item.kategori_icon ? `${item.kategori_icon} ` : ''}{(item as any).subkategori || item.subKategori || item.kategori}
             </div>
           </div>
           <div className="font-mono font-semibold text-gray-700 whitespace-nowrap">

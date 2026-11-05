@@ -15,8 +15,6 @@ import {
   deleteSubcategory,
   setDefaultBudget,
   getDefaultBudget,
-  updateInvestmentAccountByName,
-  deleteInvestmentAccountByName,
   type SetupData,
 } from '@/lib/api/setup'
 import { getBankOptions } from '@/lib/api/bank-options'
@@ -206,16 +204,6 @@ export default function SetupView({ user, onClose }: Props) {
     }
   }
 
-  // Investment subkategori handler: update opening balance via linked account
-  async function handleUpdateInvestmentBalance(sub: Subcategory, newBalance: number) {
-    try {
-      await updateInvestmentAccountByName(user.id, sub.name, newBalance)
-      await reload()
-    } catch (err: any) {
-      alert('Error: ' + err.message)
-    }
-  }
-
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -231,18 +219,6 @@ export default function SetupView({ user, onClose }: Props) {
         <p className="text-xs text-rose-700">Gagal memuat data setup</p>
       </div>
     )
-  }
-
-  // Get investment account balance by subkategori name (auto-link)
-  const getInvestmentBalance = (subName: string): number => {
-    const acc = data.accounts.find(a => a.name === subName && a.type === 'investment')
-    return acc?.opening_balance ?? 0
-  }
-
-  // Check if subkategori is investment
-  const isInvestmentSub = (sub: Subcategory): boolean => {
-    const cat = data.categories.find(c => c.id === sub.category_id)
-    return cat?.type === 'investment'
   }
 
   // Get available bank options (not yet selected by user)
@@ -524,12 +500,10 @@ export default function SetupView({ user, onClose }: Props) {
                             key={`${sub.id}-${sub.name}`}
                             subcategory={sub}
                             budget={getDefaultBudget(data.budgets, sub.id)}
-                            investmentBalance={isInvestmentSub(sub) ? getInvestmentBalance(sub.name) : undefined}
                             editMode={editMode}
                             onUpdateName={handleUpdateSubcategory}
                             onDelete={handleDeleteSubcategory}
                             onSetBudget={handleSetBudget}
-                            onUpdateInvestmentBalance={isInvestmentSub(sub) ? handleUpdateInvestmentBalance : undefined}
                           />
                         ))
                       )}
@@ -725,28 +699,22 @@ function AccountRow({
 function SubcategoryRow({
   subcategory,
   budget,
-  investmentBalance,
   editMode,
   onUpdateName,
   onDelete,
   onSetBudget,
-  onUpdateInvestmentBalance,
 }: {
   subcategory: Subcategory
   budget: number
-  investmentBalance?: number
   editMode: boolean
   onUpdateName: (sub: Subcategory, newName: string) => void
   onDelete: (sub: Subcategory) => void
   onSetBudget: (sub: Subcategory, amount: number) => void
-  onUpdateInvestmentBalance?: (sub: Subcategory, amount: number) => void
 }) {
   const [isEditingName, setIsEditingName] = useState(false)
   const [tempName, setTempName] = useState(subcategory.name)
   const [isEditingBudget, setIsEditingBudget] = useState(false)
   const [tempBudget, setTempBudget] = useState(String(budget))
-  const [isEditingInvestment, setIsEditingInvestment] = useState(false)
-  const [tempInvestment, setTempInvestment] = useState(String(investmentBalance ?? 0))
 
   function saveName() {
     if (tempName.trim() && tempName !== subcategory.name) {
@@ -759,12 +727,6 @@ function SubcategoryRow({
     const num = parseRupiah(tempBudget)
     onSetBudget(subcategory, num)
     setIsEditingBudget(false)
-  }
-
-  function saveInvestment() {
-    const num = parseRupiah(tempInvestment)
-    onUpdateInvestmentBalance?.(subcategory, num)
-    setIsEditingInvestment(false)
   }
 
   return (
@@ -805,98 +767,53 @@ function SubcategoryRow({
         </div>
       )}
 
-      {/* Budget + Investment (right side) */}
+      {/* Budget (right side) */}
       {editMode && (
         <div className="flex items-center gap-1 shrink-0">
-          {/* Investment balance (for investment subkategori only) */}
-          {investmentBalance !== undefined && (
-            isEditingInvestment ? (
-              <>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={tempInvestment}
-                  onChange={(e) => setTempInvestment(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="0"
-                  className="w-20 text-right bg-white border border-indigo-300 rounded px-2 py-0.5 text-[10px] font-bold"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveInvestment()
-                    if (e.key === 'Escape') setIsEditingInvestment(false)
-                  }}
-                />
+          {isEditingBudget ? (
+            <>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={tempBudget}
+                onChange={(e) => setTempBudget(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="0"
+                className="w-20 text-right bg-white border border-pink-300 rounded px-2 py-0.5 text-[10px] font-bold"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveBudget()
+                  if (e.key === 'Escape') setIsEditingBudget(false)
+                }}
+              />
+              <button
+                onClick={saveBudget}
+                className="text-[10px] text-white bg-emerald-500 hover:bg-emerald-600 px-1.5 py-0.5 rounded font-bold"
+              >
+                ✓
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] font-bold text-pink-700/80 bg-pink-100 px-1.5 py-0.5 rounded">
+                {budget > 0 ? formatRupiah(budget) : '—'}
+              </span>
+              <button
+                onClick={() => setIsEditingBudget(true)}
+                className="text-[10px] text-emerald-600 hover:bg-emerald-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
+                title="Set budget default"
+              >
+                💰
+              </button>
+              {subcategory.is_custom && (
                 <button
-                  onClick={saveInvestment}
-                  className="text-[10px] text-white bg-emerald-500 hover:bg-emerald-600 px-1.5 py-0.5 rounded font-bold"
+                  onClick={() => onDelete(subcategory)}
+                  className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
+                  title="Hapus subkategori (custom)"
                 >
-                  ✓
+                  🗑️
                 </button>
-              </>
-            ) : (
-              <>
-                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded">
-                  {investmentBalance > 0 ? formatRupiah(investmentBalance) : '—'}
-                </span>
-                <button
-                  onClick={() => setIsEditingInvestment(true)}
-                  className="text-[10px] text-indigo-600 hover:bg-indigo-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
-                  title="Edit saldo investasi"
-                >
-                  💰
-                </button>
-              </>
-            )
-          )}
-
-          {/* Default budget (for non-investment subkategori) */}
-          {investmentBalance === undefined && (
-            isEditingBudget ? (
-              <>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={tempBudget}
-                  onChange={(e) => setTempBudget(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="0"
-                  className="w-20 text-right bg-white border border-pink-300 rounded px-2 py-0.5 text-[10px] font-bold"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveBudget()
-                    if (e.key === 'Escape') setIsEditingBudget(false)
-                  }}
-                />
-                <button
-                  onClick={saveBudget}
-                  className="text-[10px] text-white bg-emerald-500 hover:bg-emerald-600 px-1.5 py-0.5 rounded font-bold"
-                >
-                  ✓
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-[10px] font-bold text-pink-700/80 bg-pink-100 px-1.5 py-0.5 rounded">
-                  {budget > 0 ? formatRupiah(budget) : '—'}
-                </span>
-                <button
-                  onClick={() => setIsEditingBudget(true)}
-                  className="text-[10px] text-emerald-600 hover:bg-emerald-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
-                  title="Set budget default"
-                >
-                  💰
-                </button>
-              </>
-            )
-          )}
-
-          {/* Delete (only for custom subkategori) */}
-          {subcategory.is_custom && (
-            <button
-              onClick={() => onDelete(subcategory)}
-              className="text-[10px] text-rose-600 hover:bg-rose-100 px-1 py-0.5 rounded opacity-60 group-hover:opacity-100"
-              title="Hapus subkategori (custom)"
-            >
-              🗑️
-            </button>
+              )}
+            </>
           )}
         </div>
       )}

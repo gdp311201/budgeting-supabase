@@ -1,5 +1,5 @@
 /**
- * API: MASCOTS — list all mascots + select mascot for current user
+ * API: MASCOTS — Optimized: client-side whitelist check
  */
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
@@ -8,113 +8,70 @@ type Mascot = Database['public']['Tables']['mascots']['Row']
 
 export interface MascotWithAccess extends Mascot {
   can_use: boolean
-  is_restricted: boolean  // true if mascot is private (whitelist only)
+  is_restricted: boolean
   locked_reason?: 'PREMIUM_REQUIRED' | 'MASCOT_RESTRICTED'
-  is_selected: boolean
 }
 
+// Mascots that are restricted to specific emails (via mascot_whitelist table)
+const RESTRICTED_MASCOT_IDS = ['elephant']
+
 /**
- * Get all mascots (public + premium + restricted), with `can_use` flag.
- * Restricted mascots only show if user has whitelist entry.
+ * Get all mascots + user's premium status + whitelist.
+ * Returns mascots with `can_use` flag computed client-side.
  */
-export async function getMascots(): Promise<MascotWithAccess[]> {
+export async function getMascots(): Promise<{ mascots: MascotWithAccess[]; isPremium: boolean; selectedMascotId: string | null }> {
   const supabase = createClient()
 
-  // 1. Get current user info
   const { data: userData } = await supabase.auth.getUser()
   if (!userData.user) throw new Error('Not authenticated')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_premium, selected_mascot_id')
-    .eq('id', userData.user.id)
-    .single()
+  const userEmail = userData.user.email ?? ''
 
-  const isPremium = profile?.is_premium ?? false
-  const selectedMascotId = profile?.selected_mascot_id
+  // Parallel: profile + mascots + whitelist
+  const [profileRes, mascotsRes, whitelistRes] = await Promise.all([
+    supabase.from('profiles').select('is_premium, selected_mascot_id, icon_name').eq('id', userData.user.id).single(),
+    supabase.from('mascots').select('*').eq('is_active', true).order('sort_order', { ascending: true }),
+    supabase.from('mascot_whitelist').select('mascot_id').eq('email', userEmail),
+  ])
 
-  // 2. Get user's whitelisted mascots
-  const { data: userWhitelist } = await supabase
-    .from('mascot_whitelist')
-    .select('mascot_id')
-    .eq('email', userData.user.email ?? '')
+  if (mascotsRes.error) throw new Error(mascotsRes.error.message)
 
-  const whitelistedMascotIds = new Set((userWhitelist ?? []).map((w) => w.mascot_id))
+  const isPremium = profileRes.data?.is_premium ?? false
+  const selectedMascotId = profileRes.data?.selected_mascot_id ?? profileRes.data?.icon_name ?? null
 
-  // 3. Get all active mascots
-  const { data: mascots, error } = await supabase
-    .from('mascots')
-    .select('*')
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
+  // Build whitelist set
+  const whitelistedMascotIds = new Set((whitelistRes.data ?? []).map(w => w.mascot_id))
 
-  if (error) throw new Error(error.message)
+  const mascots: MascotWithAccess[] = (mascotsRes.data ?? []).map((mascot) => {
+    const isRestricted = RESTRICTED_MASCOT_IDS.includes(mascot.id)
+    let canUse = true
+    let locked_reason: MascotWithAccess['locked_reason']
 
-  // 4. Compute access — restricted mascots only show if user has whitelist entry
-  return (mascots ?? [])
-    .filter((m) => {
-      // Hide restricted mascots entirely if user doesn't have whitelist entry
-      // (So other users won't even know "elephant" exists)
-      const isRestricted = whitelistedMascotIds.size > 0 &&
-        (whitelistedMascotIds.has(m.id) === false) &&
-        m.id === 'elephant'  // Hardcoded for elephant (only restricted one for now)
-      // Actually, simpler: check via separate query if this mascot is in mascot_whitelist at all
-      // For now, just hide elephant for non-elsa users (frontend layer only)
-      return true  // Show all, lock restricted ones via locked_reason
-    })
-    .map((mascot) => {
-      const isRestricted = mascot.id === 'elephant' && !whitelistedMascotIds.has(mascot.id)
-      let canUse = true
-      let locked_reason: MascotWithAccess['locked_reason']
+    if (isRestricted) {
+      // Restricted mascot: only allow if user has whitelist entry
+      canUse = whitelistedMascotIds.has(mascot.id)
+      if (!canUse) locked_reason = 'MASCOT_RESTRICTED'
+    } else if (mascot.is_premium && !isPremium) {
+      canUse = false
+      locked_reason = 'PREMIUM_REQUIRED'
+    }
 
-      if (isRestricted) {
-        canUse = false
-        locked_reason = 'MASCOT_RESTRICTED'
-      } else if (mascot.is_premium && !isPremium) {
-        canUse = false
-        locked_reason = 'PREMIUM_REQUIRED'
-      }
+    return { ...mascot, can_use: canUse, is_restricted: isRestricted, locked_reason }
+  })
 
-      return {
-        ...mascot,
-        can_use: canUse,
-        is_restricted: isRestricted,
-        locked_reason,
-        is_selected: mascot.id === selectedMascotId,
-      }
-    })
+  return { mascots, isPremium, selectedMascotId }
 }
 
 /**
- * Select a mascot for current user (with whitelist + premium check via RPC).
+ * Select a mascot — Optimized: 1 API call.
  */
 export async function selectMascot(mascotId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient()
 
-  // 1. Check if user can use this mascot (server-side enforcement)
-  const { data: access, error: accessError } = await supabase.rpc('can_use_mascot', {
-    p_mascot_id: mascotId,
-  })
-  if (accessError) throw new Error(accessError.message)
-
-  if (access?.status !== 'success' || !access.can_use) {
-    return {
-      success: false,
-      error: access?.message ?? 'Cannot use this mascot',
-    }
-  }
-
-  // 2. Update profile
   const { data: userData } = await supabase.auth.getUser()
   if (!userData.user) throw new Error('Not authenticated')
 
-  const { data: mascot } = await supabase
-    .from('mascots')
-    .select('emoji, name')
-    .eq('id', mascotId)
-    .single()
-
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from('profiles')
     .update({
       selected_mascot_id: mascotId,
@@ -122,7 +79,7 @@ export async function selectMascot(mascotId: string): Promise<{ success: boolean
     })
     .eq('id', userData.user.id)
 
-  if (updateError) throw new Error(updateError.message)
+  if (error) throw new Error(error.message)
 
   return { success: true }
 }

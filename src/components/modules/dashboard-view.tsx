@@ -8,6 +8,7 @@ import { formatRupiah, getCurrentMonth, getCurrentYear, getTahunListDynamic, cn 
 interface Props {
   user: User
   mascotEmoji?: string
+  nickname?: string | null
 }
 
 const BULAN_LIST = [
@@ -15,7 +16,7 @@ const BULAN_LIST = [
   'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER',
 ]
 
-export default function DashboardView({ user, mascotEmoji }: Props) {
+export default function DashboardView({ user, mascotEmoji, nickname }: Props) {
   const [month, setMonth] = useState(getCurrentMonth())
   const [year, setYear] = useState(getCurrentYear())
   const [data, setData] = useState<DashboardData | null>(null)
@@ -48,7 +49,7 @@ export default function DashboardView({ user, mascotEmoji }: Props) {
         <div>
           <h1 className="text-base font-bold text-pink-950/80 tracking-wide">DASHBOARD</h1>
           <p className="text-[11px] text-pink-800/60 font-medium">
-            Hi, {user.email?.split('@')[0] ?? 'there'} 👋
+            Hi, {nickname ?? user.email?.split('@')[0] ?? 'there'} 👋
           </p>
         </div>
         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-pink-100/80 text-pink-800 border border-pink-200 shadow-sm">

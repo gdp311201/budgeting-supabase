@@ -68,7 +68,57 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        style={{ backgroundColor: '#d8b0c0' }}
       >
+        {/* PWA Loading Screen — tampil sebelum React hydrate */}
+        <div id="pwa-loading" style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#d8b0c0',
+          transition: 'opacity 0.3s ease',
+        }}>
+          <div style={{ fontSize: '3rem', marginBottom: '0.5rem', animation: 'pulseGlow 2s ease-in-out infinite' }}>🐘</div>
+          <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.05em' }}>
+            Budgeting Master Sync
+          </p>
+          <div style={{
+            marginTop: '1rem',
+            width: '1.5rem',
+            height: '1.5rem',
+            border: '2px solid rgba(255,255,255,0.3)',
+            borderTopColor: 'rgba(255,255,255,0.8)',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+        </div>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes spin { to { transform: rotate(360deg); } }
+            @keyframes pulseGlow {
+              0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255,255,255,0.5)); }
+              50% { transform: scale(1.06); filter: drop-shadow(0 0 25px rgba(255,192,203,0.9)); }
+            }
+          `
+        }} />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            // Hide loading screen once React hydrates
+            window.addEventListener('load', function() {
+              setTimeout(function() {
+                var el = document.getElementById('pwa-loading');
+                if (el) {
+                  el.style.opacity = '0';
+                  setTimeout(function() { el.style.display = 'none'; }, 300);
+                }
+              }, 100);
+            });
+          `
+        }} />
         {children}
         <Toaster />
       </body>

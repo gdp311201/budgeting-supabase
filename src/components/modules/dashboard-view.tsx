@@ -8,6 +8,7 @@ import { formatRupiah, getCurrentMonth, getCurrentYear, getTahunListDynamic, cn 
 interface Props {
   user: User
   mascotEmoji?: string
+  mascotIconUrl?: string | null
   nickname?: string | null
 }
 
@@ -16,7 +17,7 @@ const BULAN_LIST = [
   'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER',
 ]
 
-export default function DashboardView({ user, mascotEmoji, nickname }: Props) {
+export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickname }: Props) {
   const [month, setMonth] = useState(getCurrentMonth())
   const [year, setYear] = useState(getCurrentYear())
   const [data, setData] = useState<DashboardData | null>(null)
@@ -99,7 +100,11 @@ export default function DashboardView({ user, mascotEmoji, nickname }: Props) {
       {/* Loading placeholder */}
       {!data && !error && (
         <div className="text-center py-12 bg-white/40 rounded-2xl border border-pink-200/60">
-          <div className="text-4xl mb-2">{mascotEmoji ?? '🐘'}</div>
+          {mascotIconUrl ? (
+            <img src={mascotIconUrl} alt="Mascot" className="w-12 h-12 mx-auto mb-2 object-contain" />
+          ) : (
+            <div className="text-4xl mb-2">{mascotEmoji ?? '🐘'}</div>
+          )}
           <p className="text-xs font-semibold text-pink-900/70">Belum ada data dimuat</p>
           <p className="text-[10px] text-pink-900/50 mt-1">Pilih periode di atas, lalu klik <b>Tampilkan Dashboard</b></p>
         </div>

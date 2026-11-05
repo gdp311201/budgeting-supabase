@@ -11,6 +11,8 @@ interface Props {
   onApply?: () => void
 }
 
+const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
+
 export default function ThemePickerModal({ open, onClose, onApply }: Props) {
   const [loading, setLoading] = useState(true)
   const [applying, setApplying] = useState(false)
@@ -60,7 +62,6 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
     return () => { cancelled = true }
   }, [open])
 
-  // Cleanup preview timer on close
   useEffect(() => {
     if (!open && previewTimerRef.current) {
       clearTimeout(previewTimerRef.current)
@@ -79,7 +80,6 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
   }
 
   function startPreview(theme: any) {
-    // Save current CSS vars
     const root = document.documentElement
     savedPaletteRef.current = root.style.getPropertyValue('--theme-primary')
     savedAccentRef.current = root.style.getPropertyValue('--theme-accent')
@@ -87,7 +87,6 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
     savedGrad2Ref.current = root.style.getPropertyValue('--theme-gradient-2')
     savedGrad3Ref.current = root.style.getPropertyValue('--theme-gradient-3')
 
-    // Apply preview theme
     const palette = typeof theme.palette === 'string' ? JSON.parse(theme.palette) : theme.palette
     applyCssVars(palette.primary, palette.accent, palette.gradient)
 
@@ -95,11 +94,8 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
     setPreviewTheme(theme)
     setPreviewTimeLeft(60)
     setShowCta(false)
-
-    // Close modal so user can explore
     onClose()
 
-    // Start countdown
     let timeLeft = 60
     const interval = setInterval(() => {
       timeLeft -= 1
@@ -114,7 +110,6 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
   }
 
   function revertPreview() {
-    // Restore saved CSS vars
     const root = document.documentElement
     if (savedPaletteRef.current) root.style.setProperty('--theme-primary', savedPaletteRef.current)
     if (savedAccentRef.current) root.style.setProperty('--theme-accent', savedAccentRef.current)
@@ -134,17 +129,13 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
   async function handleSelectTheme(theme: any) {
     const palette = typeof theme.palette === 'string' ? JSON.parse(theme.palette) : theme.palette
 
-    // Free user clicking premium → start preview
     if (theme.is_premium && !isPremium) {
       startPreview(theme)
       return
     }
 
-    // Can use → apply directly
     if (applying) return
     setApplying(true)
-
-    // Optimistic UI
     applyCssVars(palette.primary, palette.accent, palette.gradient)
     setSelectedThemeId(theme.id)
 
@@ -163,14 +154,10 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
   }
 
   async function handleSelectMascot(mascot: any) {
-    // Free user clicking premium mascot → start preview (mascot only, no wallpaper change)
     if (mascot.is_premium && !isPremium && !mascot.is_restricted) {
-      // For mascots, just show alert (preview doesn't make sense for emoji)
       alert('🐾 Maskot ini untuk Premium member. Upgrade sekarang!')
       return
     }
-
-    // Restricted mascot (elephant) — hide entirely, shouldn't be clickable
     if (mascot.is_restricted && !mascot.can_use) return
 
     if (applying) return
@@ -193,7 +180,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
 
   if (!open && !previewActive && !showCta) return null
 
-  // ===== PREVIEW BANNER =====
+  // Preview banner
   if (previewActive && !showCta) {
     return (
       <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-pink-500 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs font-bold animate-pop"
@@ -206,20 +193,18 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
     )
   }
 
-  // ===== CTA MODAL AFTER PREVIEW =====
+  // CTA modal after preview
   if (showCta) {
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-pink-950/60 backdrop-blur-md">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl max-w-xs w-full p-6 text-center animate-pop">
+        <div className="bg-white/20 backdrop-blur-xl rounded-3xl shadow-2xl max-w-xs w-full p-6 text-center animate-pop border border-white/30">
           <div className="text-4xl mb-3">💎</div>
-          <h2 className="text-lg font-bold text-pink-950 mb-1">Preview Selesai!</h2>
-          <p className="text-xs text-pink-800/70 mb-4 leading-relaxed">
+          <h2 className="text-lg font-bold text-white mb-1 drop-shadow-lg">Preview Selesai!</h2>
+          <p className="text-xs text-white/80 mb-4 leading-relaxed drop-shadow">
             Kamu baru saja mencoba <b>{previewTheme?.name}</b>.<br />
-            Upgrade ke Premium untuk mengaktifkan tema ini dan menikmati semua fitur premium!
+            Upgrade ke Premium untuk mengaktifkan tema ini!
           </p>
-
-          {/* Mini preview card */}
-          <div className="mb-4 p-3 rounded-2xl border-2 border-pink-200"
+          <div className="mb-4 p-3 rounded-2xl border border-white/30"
             style={{
               background: `linear-gradient(135deg, ${
                 previewTheme ? (JSON.parse(previewTheme.palette)?.gradient?.[0] ?? '#f3f4f6') : '#f3f4f6'
@@ -229,21 +214,16 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
             }}
           >
             <div className="text-2xl mb-1">{previewTheme?.emoji}</div>
-            <p className="text-xs font-bold text-white drop-shadow">{previewTheme?.name}</p>
+            <p className="text-xs font-bold text-white drop-shadow-lg">{previewTheme?.name}</p>
           </div>
-
           <div className="space-y-2">
-            <a
-              href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20upgrade%20ke%20Premium%20untuk%20tema%20Budgeting%20App"
-              target="_blank"
-              rel="noopener noreferrer"
+            <a href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20upgrade%20ke%20Premium" target="_blank" rel="noopener noreferrer"
               className="block w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-sm"
             >
-              💬 Chat Admin — Upgrade Sekarang
+              💬 Chat Admin — Upgrade
             </a>
-            <button
-              onClick={revertPreview}
-              className="w-full bg-pink-100 hover:bg-pink-200 text-pink-700 font-semibold py-2.5 px-4 rounded-xl transition text-sm"
+            <button onClick={revertPreview}
+              className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-2.5 px-4 rounded-xl transition text-sm border border-white/30"
             >
               Mungkin nanti
             </button>
@@ -255,48 +235,44 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
 
   if (!open) return null
 
-  // Group themes
   const freeThemes = themes.filter(t => !t.is_premium)
   const premiumThemes = themes.filter(t => t.is_premium)
 
-  // Group mascots
+  const vipMascots = mascots.filter(m => m.is_restricted && m.can_use)
   const freeMascots = mascots.filter(m => !m.is_premium && !m.is_restricted)
-  const premiumMascots = mascots.filter(m => m.is_premium || (m.is_restricted && m.can_use))
-  const restrictedMascots = mascots.filter(m => m.is_restricted && !m.can_use)
+  const premiumMascots = mascots.filter(m => m.is_premium && !m.is_restricted)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-pink-950/50 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92vh] animate-pop">
-        {/* Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 shrink-0"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
-        >
+      <div className="bg-white/20 backdrop-blur-2xl saturate-150 w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/30">
+        {/* Header — compact */}
+        <div className="px-5 py-3 border-b border-white/20 flex items-center justify-between bg-gradient-to-r from-pink-500/80 to-rose-500/80 rounded-t-3xl shrink-0">
           <div>
-            <h3 className="text-base font-bold text-white tracking-wide drop-shadow">🎨 Personalisasi</h3>
-            <p className="text-[11px] text-white/90 font-semibold mt-0.5">Pilih tema & maskot favoritmu</p>
+            <h3 className="text-sm font-bold text-white tracking-wide drop-shadow-lg">🎨 Personalisasi</h3>
+            <p className="text-[10px] text-white/90 font-semibold mt-0.5 drop-shadow">Pilih tema & maskot favoritmu</p>
           </div>
           <button onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center shrink-0"
           >
             ✕
           </button>
         </div>
 
         {/* Tab switcher */}
-        <div className="flex border-b border-pink-200/60 shrink-0">
+        <div className="flex border-b border-white/20 shrink-0">
           <button onClick={() => setTab('theme')}
-            className={cn('flex-1 py-2.5 text-xs font-bold transition',
-              tab === 'theme' ? 'bg-pink-100 text-pink-950 border-b-2 border-pink-500' : 'text-pink-700/60 hover:bg-pink-50'
+            className={cn('flex-1 py-2 text-xs font-bold transition',
+              tab === 'theme' ? 'bg-white/20 text-white border-b-2 border-pink-300' : 'text-white/60 hover:text-white'
             )}
           >
             🎨 Tema Warna
           </button>
           <button onClick={() => setTab('mascot')}
-            className={cn('flex-1 py-2.5 text-xs font-bold transition',
-              tab === 'mascot' ? 'bg-pink-100 text-pink-950 border-b-2 border-pink-500' : 'text-pink-700/60 hover:bg-pink-50'
+            className={cn('flex-1 py-2 text-xs font-bold transition',
+              tab === 'mascot' ? 'bg-white/20 text-white border-b-2 border-pink-300' : 'text-white/60 hover:text-white'
             )}
           >
             🐾 Maskot
@@ -307,8 +283,8 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
         <div className="overflow-y-auto px-4 py-4 flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
           {loading ? (
             <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-pink-500 mb-2"></div>
-              <p className="text-xs text-pink-800/60 font-medium">Memuat data...</p>
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-white mb-2"></div>
+              <p className="text-xs text-white/70 font-medium">Memuat data...</p>
             </div>
           ) : (
             <>
@@ -319,7 +295,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                   <div>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">FREE</span>
-                      <div className="flex-1 h-px bg-emerald-200/60"></div>
+                      <div className="flex-1 h-px bg-white/20"></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {freeThemes.map((theme) => {
@@ -329,18 +305,22 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                           <button key={theme.id}
                             onClick={() => handleSelectTheme(theme)}
                             className={cn(
-                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03]',
-                              isSelected ? 'border-pink-500 ring-2 ring-pink-200 shadow-md' : 'border-pink-200/60 hover:border-pink-400'
+                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03] overflow-hidden',
+                              isSelected ? 'border-white ring-2 ring-white/50 shadow-lg' : 'border-white/20 hover:border-white/50'
                             )}
                             style={{
                               background: `linear-gradient(135deg, ${palette?.gradient?.[0] ?? '#f3f4f6'}, ${palette?.gradient?.[2] ?? '#f3f4f6'})`,
                             }}
                           >
-                            {isSelected && (
-                              <span className="absolute top-1 left-1 text-[10px] bg-white text-pink-600 rounded-full px-1.5 py-0.5 font-bold">✓</span>
-                            )}
-                            <div className="text-3xl mb-1">{theme.emoji}</div>
-                            <p className="text-xs font-bold text-white drop-shadow">{theme.name}</p>
+                            {/* Dark overlay for text readability */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                            <div className="relative z-10">
+                              {isSelected && (
+                                <span className="absolute top-1 left-1 text-[10px] bg-white text-pink-600 rounded-full px-1.5 py-0.5 font-bold">✓</span>
+                              )}
+                              <div className="text-3xl mb-1">{theme.emoji}</div>
+                              <p className="text-xs font-bold text-white drop-shadow-lg">{theme.name}</p>
+                            </div>
                           </button>
                         )
                       })}
@@ -351,7 +331,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                   <div>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-1 rounded-full shimmer-badge">⭐ PREMIUM</span>
-                      <div className="flex-1 h-px bg-amber-200/60"></div>
+                      <div className="flex-1 h-px bg-white/20"></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {premiumThemes.map((theme) => {
@@ -361,24 +341,27 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                           <button key={theme.id}
                             onClick={() => handleSelectTheme(theme)}
                             className={cn(
-                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03]',
-                              isSelected ? 'border-pink-500 ring-2 ring-pink-200 shadow-md' : 'border-amber-200/60 hover:border-amber-400'
+                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03] overflow-hidden',
+                              isSelected ? 'border-white ring-2 ring-white/50 shadow-lg' : 'border-white/20 hover:border-white/50'
                             )}
                             style={{
                               background: `linear-gradient(135deg, ${palette?.gradient?.[0] ?? '#f3f4f6'}, ${palette?.gradient?.[2] ?? '#f3f4f6'})`,
                             }}
                           >
-                            {!isPremium && !isSelected && (
-                              <span className="absolute top-1 right-1 text-[8px] bg-black/40 text-white rounded-full px-1.5 py-0.5 font-bold backdrop-blur-sm">⭐</span>
-                            )}
-                            {isSelected && (
-                              <span className="absolute top-1 left-1 text-[10px] bg-white text-pink-600 rounded-full px-1.5 py-0.5 font-bold">✓</span>
-                            )}
-                            <div className="text-3xl mb-1">{theme.emoji}</div>
-                            <p className="text-xs font-bold text-white drop-shadow">{theme.name}</p>
-                            {!isPremium && (
-                              <p className="text-[8px] text-white/70 mt-0.5">{isSelected ? 'Aktif' : 'Klik untuk preview'}</p>
-                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                            <div className="relative z-10">
+                              {!isPremium && !isSelected && (
+                                <span className="absolute top-1 right-1 text-[8px] bg-black/50 text-white rounded-full px-1.5 py-0.5 font-bold backdrop-blur-sm">⭐</span>
+                              )}
+                              {isSelected && (
+                                <span className="absolute top-1 left-1 text-[10px] bg-white text-pink-600 rounded-full px-1.5 py-0.5 font-bold">✓</span>
+                              )}
+                              <div className="text-3xl mb-1">{theme.emoji}</div>
+                              <p className="text-xs font-bold text-white drop-shadow-lg">{theme.name}</p>
+                              {!isPremium && (
+                                <p className="text-[8px] text-white/70 mt-0.5 drop-shadow">{isSelected ? 'Aktif' : 'Klik untuk preview'}</p>
+                              )}
+                            </div>
                           </button>
                         )
                       })}
@@ -386,7 +369,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                   </div>
 
                   {!isPremium && (
-                    <p className="text-center text-[10px] text-pink-700/50 italic">
+                    <p className="text-center text-[10px] text-white/50 italic">
                       💡 Klik tema premium untuk preview 60 detik
                     </p>
                   )}
@@ -396,11 +379,51 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
               {/* ===== MASCOT TAB ===== */}
               {tab === 'mascot' && (
                 <div className="space-y-4">
+                  {/* VIP Section — only for whitelisted users (Elsa) */}
+                  {vipMascots.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-100 px-2 py-1 rounded-full">👑 VIP - MY LOVE ONLY</span>
+                        <div className="flex-1 h-px bg-white/20"></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {vipMascots.map((mascot) => {
+                          const isSelected = mascot.id === selectedMascotId
+                          return (
+                            <button key={mascot.id}
+                              onClick={() => handleSelectMascot(mascot)}
+                              className={cn(
+                                'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03] overflow-hidden',
+                                isSelected ? 'border-white ring-2 ring-white/50 shadow-lg' : 'border-rose-200/40 hover:border-rose-300/60'
+                              )}
+                              style={{
+                                background: 'linear-gradient(135deg, rgba(251, 113, 133, 0.15), rgba(244, 63, 94, 0.15))',
+                              }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
+                              <div className="relative z-10">
+                                {isSelected && (
+                                  <span className="absolute top-1 left-1 text-[10px] bg-rose-500 text-white rounded-full px-1.5 py-0.5 font-bold">✓</span>
+                                )}
+                                {mascot.icon_url ? (
+                                  <img src={mascot.icon_url} alt={mascot.name} className="w-10 h-10 mb-1 mx-auto" />
+                                ) : (
+                                  <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
+                                )}
+                                <p className="text-xs font-bold text-white text-center drop-shadow-lg">{mascot.name}</p>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* FREE Section */}
                   <div>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">FREE</span>
-                      <div className="flex-1 h-px bg-emerald-200/60"></div>
+                      <div className="flex-1 h-px bg-white/20"></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {freeMascots.map((mascot) => {
@@ -409,19 +432,23 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                           <button key={mascot.id}
                             onClick={() => handleSelectMascot(mascot)}
                             className={cn(
-                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03]',
-                              isSelected ? 'border-pink-500 ring-2 ring-pink-200 bg-white/80 shadow-md' : 'border-pink-200/60 hover:border-pink-400 bg-white/60'
+                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03] overflow-hidden',
+                              isSelected ? 'border-white ring-2 ring-white/50 shadow-lg' : 'border-white/20 hover:border-white/50'
                             )}
+                            style={{ background: 'rgba(255, 255, 255, 0.15)' }}
                           >
-                            {isSelected && (
-                              <span className="absolute top-1 left-1 text-[10px] bg-pink-500 text-white rounded-full px-1.5 py-0.5 font-bold">✓</span>
-                            )}
-                            {mascot.icon_url ? (
-                              <img src={mascot.icon_url} alt={mascot.name} className="w-10 h-10 mb-1 mx-auto" />
-                            ) : (
-                              <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
-                            )}
-                            <p className="text-xs font-bold text-pink-950 text-center">{mascot.name}</p>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                            <div className="relative z-10">
+                              {isSelected && (
+                                <span className="absolute top-1 left-1 text-[10px] bg-pink-500 text-white rounded-full px-1.5 py-0.5 font-bold">✓</span>
+                              )}
+                              {mascot.icon_url ? (
+                                <img src={mascot.icon_url} alt={mascot.name} className="w-10 h-10 mb-1 mx-auto" />
+                              ) : (
+                                <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
+                              )}
+                              <p className="text-xs font-bold text-white text-center drop-shadow-lg">{mascot.name}</p>
+                            </div>
                           </button>
                         )
                       })}
@@ -432,7 +459,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                   <div>
                     <div className="flex items-center gap-2 mb-2 px-1">
                       <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2 py-1 rounded-full">⭐ PREMIUM</span>
-                      <div className="flex-1 h-px bg-amber-200/60"></div>
+                      <div className="flex-1 h-px bg-white/20"></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {premiumMascots.map((mascot) => {
@@ -441,22 +468,26 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                           <button key={mascot.id}
                             onClick={() => handleSelectMascot(mascot)}
                             className={cn(
-                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03]',
-                              isSelected ? 'border-pink-500 ring-2 ring-pink-200 bg-white/80 shadow-md' : 'border-amber-200/60 hover:border-amber-400 bg-white/60'
+                              'relative p-3 rounded-2xl border-2 transition-all text-left hover:scale-[1.03] overflow-hidden',
+                              isSelected ? 'border-white ring-2 ring-white/50 shadow-lg' : 'border-white/20 hover:border-white/50'
                             )}
+                            style={{ background: 'rgba(255, 255, 255, 0.10)' }}
                           >
-                            {!isPremium && !isSelected && !mascot.is_restricted && (
-                              <span className="absolute top-1 right-1 text-[8px] bg-black/40 text-white rounded-full px-1.5 py-0.5 font-bold backdrop-blur-sm">⭐</span>
-                            )}
-                            {isSelected && (
-                              <span className="absolute top-1 left-1 text-[10px] bg-pink-500 text-white rounded-full px-1.5 py-0.5 font-bold">✓</span>
-                            )}
-                            {mascot.icon_url ? (
-                              <img src={mascot.icon_url} alt={mascot.name} className="w-10 h-10 mb-1 mx-auto" />
-                            ) : (
-                              <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
-                            )}
-                            <p className="text-xs font-bold text-pink-950 text-center">{mascot.name}</p>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                            <div className="relative z-10">
+                              {!isPremium && !isSelected && (
+                                <span className="absolute top-1 right-1 text-[8px] bg-black/50 text-white rounded-full px-1.5 py-0.5 font-bold backdrop-blur-sm">⭐</span>
+                              )}
+                              {isSelected && (
+                                <span className="absolute top-1 left-1 text-[10px] bg-pink-500 text-white rounded-full px-1.5 py-0.5 font-bold">✓</span>
+                              )}
+                              {mascot.icon_url ? (
+                                <img src={mascot.icon_url} alt={mascot.name} className="w-10 h-10 mb-1 mx-auto" />
+                              ) : (
+                                <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
+                              )}
+                              <p className="text-xs font-bold text-white text-center drop-shadow-lg">{mascot.name}</p>
+                            </div>
                           </button>
                         )
                       })}
@@ -469,16 +500,15 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-pink-200/60 bg-white/40 shrink-0">
+        <div className="px-4 py-3 border-t border-white/20 bg-white/5 shrink-0 rounded-b-3xl">
           <button onClick={onClose}
-            className="w-full bg-white/90 text-pink-950 font-semibold py-2.5 px-4 rounded-xl border border-pink-200/80 shadow-sm transition text-sm hover:bg-white"
+            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-2.5 px-4 rounded-xl border border-white/30 transition text-sm"
           >
             Selesai
           </button>
         </div>
       </div>
 
-      {/* Inline shimmer CSS */}
       <style>{`
         .shimmer-badge {
           background: linear-gradient(90deg, #fef3c7, #fbbf24, #fef3c7);
@@ -487,6 +517,10 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
         }
         @keyframes shimmer {
           to { background-position: 200% center; }
+        }
+        @keyframes modalFloat {
+          0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
       `}</style>
     </div>

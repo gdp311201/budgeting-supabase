@@ -140,7 +140,7 @@ export default function BudgetingApp({
 
   // Main app state (tabs + setup)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
-  const [showSetup, setShowSetup] = useState(false)
+  const [showSetup, setShowSetup] = useState(appState === 'setting')
 
   // ===== ONBOARDING ACTIVE =====
   if (showOnboarding) {
@@ -184,7 +184,7 @@ export default function BudgetingApp({
           🎨
         </button>
         <a
-          href="https://wa.me/6281575859792?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App"
+          href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App"
           target="_blank"
           rel="noopener noreferrer"
           className="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center transition hover:scale-110"

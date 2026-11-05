@@ -164,6 +164,48 @@
 }
 
 /* ============================================================
+   THEME-AWARE COLOR OVERRIDES
+   Override Tailwind's hardcoded pink/rose classes to use
+   CSS variables (--theme-primary, --theme-accent)
+   so theme picker actually changes UI colors
+   ============================================================ */
+@layer utilities {
+  /* Gradient buttons (Simpan Transaksi, Tampilkan Dashboard, etc.) */
+  .bg-gradient-to-r.from-pink-400.to-rose-400,
+  .bg-gradient-to-r.from-pink-400.to-rose-400:hover {
+    background-image: linear-gradient(to right, var(--theme-primary, #f472b6), var(--theme-accent, #fb7185));
+  }
+  .bg-gradient-to-r.from-pink-500.to-rose-500,
+  .bg-gradient-to-r.from-pink-500.to-rose-500:hover {
+    background-image: linear-gradient(to right, var(--theme-primary, #ec4899), var(--theme-accent, #f43f5e));
+  }
+
+  /* Solid backgrounds */
+  .bg-pink-500 { background-color: var(--theme-primary, #ec4899); }
+  .bg-pink-400 { background-color: var(--theme-primary, #f472b6); }
+  .hover\:bg-pink-500:hover { background-color: var(--theme-primary, #ec4899); }
+  .hover\:bg-pink-600:hover { background-color: var(--theme-primary, #db2777); }
+
+  /* Gradient from */
+  .from-pink-400 { --tw-gradient-from: var(--theme-primary, #f472b6) var(--tw-gradient-from-position, 0%); }
+  .from-pink-500 { --tw-gradient-from: var(--theme-primary, #ec4899) var(--tw-gradient-from-position, 0%); }
+  .to-rose-400 { --tw-gradient-to: var(--theme-accent, #fb7185) var(--tw-gradient-to-position, 100%); }
+  .to-rose-500 { --tw-gradient-to: var(--theme-accent, #f43f5e) var(--tw-gradient-to-position, 100%); }
+  .via-rose-500 { --tw-gradient-via: var(--theme-accent, #f43f5e) var(--tw-gradient-via-position, 50%); }
+
+  /* Active states */
+  .bg-pink-500.text-white { background-color: var(--theme-primary, #ec4899); }
+
+  /* Text colors */
+  .text-pink-500 { color: var(--theme-primary, #ec4899); }
+  .text-pink-600 { color: var(--theme-primary, #db2777); }
+  .text-pink-700 { color: var(--theme-primary, #be185d); }
+
+  /* Borders */
+  .border-pink-500 { border-color: var(--theme-primary, #ec4899); }
+}
+
+/* ============================================================
    GLASSMORPHISM UTILITY CLASSES (iOS-style)
    ============================================================ */
 

@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BudgetingApp from '@/components/budgeting-app'
 import SetupRequired from '@/components/setup-required'
-import AdminPanelWrapper from '@/components/admin-panel-wrapper'
 
 export default async function Home({
   searchParams,
@@ -12,7 +11,6 @@ export default async function Home({
   const sp = await searchParams
   const isAdminRoute = sp.admin === '1'
 
-  // Detect if Supabase is configured
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   const isConfigured =
@@ -21,7 +19,6 @@ export default async function Home({
     !supabaseUrl.includes('YOUR-PROJECT-REF') &&
     !supabaseKey.includes('YOUR-ANON-KEY')
 
-  // Not configured yet → show setup checklist
   if (!isConfigured) {
     return <SetupRequired />
   }
@@ -31,7 +28,6 @@ export default async function Home({
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Admin route — needs to be logged in + email in ADMIN_EMAILS env var
   if (isAdminRoute) {
     if (!user) {
       redirect('/login?redirect=/?admin=1')
@@ -46,30 +42,25 @@ export default async function Home({
             <p className="text-sm text-rose-700 mt-2">
               Halaman ini khusus admin. Email Anda ({user.email}) tidak terdaftar sebagai admin.
             </p>
-            <a
-              href="/"
-              className="inline-block mt-4 text-rose-700 hover:text-rose-900 font-semibold underline text-sm"
-            >
+            <a href="/" className="inline-block mt-4 text-rose-700 hover:text-rose-900 font-semibold underline text-sm">
               ← Kembali ke Dashboard
             </a>
           </div>
         </main>
       )
     }
-    return <AdminPanelWrapper />
+    // Admin panel handled via budgeting-app's admin route
   }
 
-  // Not logged in → redirect to login
   if (!user) {
     redirect('/login')
   }
 
-  // Get user's profile (theme + app name customization)
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  return <BudgetingApp user={user} profile={profile} />
+  return <BudgetingApp user={user} initialProfile={profile} />
 }

@@ -233,7 +233,7 @@ export default function SetupView({ user, onClose }: Props) {
       onClick={onClose}
     >
     <div
-      className="w-full max-w-md bg-white/85 backdrop-blur-xl shadow-2xl flex flex-col rounded-3xl border border-white/50"
+      className="w-full max-w-md bg-white/75 backdrop-blur-2xl shadow-2xl flex flex-col rounded-3xl border border-white/60"
       onClick={(e) => e.stopPropagation()}
       style={{ maxHeight: '90vh' }}
     >

@@ -60,20 +60,18 @@ export default function FeedbackModal({ open, onClose, waLink }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-pink-950/50 backdrop-blur-md"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-pop">
-        {/* Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 shrink-0"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}
-        >
+      <div className="bg-white/20 backdrop-blur-2xl saturate-150 w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/30">
+        {/* Header — compact */}
+        <div className="px-5 py-3 border-b border-white/20 flex items-center justify-between bg-gradient-to-r from-pink-500/80 to-rose-500/80 rounded-t-3xl shrink-0">
           <div>
-            <h3 className="text-base font-bold text-white tracking-wide drop-shadow">💬 Kirim Feedback</h3>
-            <p className="text-[11px] text-white/90 font-semibold mt-0.5">Saran & kritik kamu sangat berharga</p>
+            <h3 className="text-sm font-bold text-white tracking-wide drop-shadow-lg">💬 Kirim Feedback</h3>
+            <p className="text-[10px] text-white/90 font-semibold mt-0.5 drop-shadow">Saran & kritik kamu sangat berharga</p>
           </div>
           <button onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center shrink-0"
           >
             ✕
           </button>

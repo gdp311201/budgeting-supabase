@@ -208,6 +208,13 @@ export default function BudgetingApp({
     return <CaraPakai onBack={() => setAppState('welcome')} />
   }
 
+  // ===== SETTING (direct from welcome page) =====
+  if (appState === 'setting') {
+    return (
+      <SetupView user={user} onClose={() => setAppState('welcome')} />
+    )
+  }
+
   // ===== MAIN APP (Dashboard + tabs) =====
   return (
     <div className="min-h-screen flex flex-col relative">

@@ -247,12 +247,12 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/85 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/50">
+      <div className="bg-white/75 backdrop-blur-2xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/60">
         {/* Header — compact */}
-        <div className="px-5 py-3 border-b border-pink-200/40 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 rounded-t-3xl shrink-0">
+        <div className="px-5 py-3 border-b border-pink-200/50 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 rounded-t-3xl shrink-0">
           <div>
-            <h3 className="text-sm font-bold text-white tracking-wide drop-shadow-lg">🎨 Personalisasi</h3>
-            <p className="text-[10px] text-white/90 font-semibold mt-0.5 drop-shadow">Pilih tema & maskot favoritmu</p>
+            <h3 className="text-sm font-bold text-white tracking-wide">🎨 Personalisasi</h3>
+            <p className="text-[10px] text-white/90 font-semibold mt-0.5">Pilih tema & maskot favoritmu</p>
           </div>
           <button onClick={onClose}
             className="w-8 h-8 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center shrink-0"
@@ -262,17 +262,17 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
         </div>
 
         {/* Tab switcher */}
-        <div className="flex border-b border-white/20 shrink-0">
+        <div className="flex border-b border-pink-200/50 shrink-0 bg-white/40">
           <button onClick={() => setTab('theme')}
-            className={cn('flex-1 py-2 text-xs font-bold transition',
-              tab === 'theme' ? 'bg-white/20 text-white border-b-2 border-pink-300' : 'text-white/60 hover:text-white'
+            className={cn('flex-1 py-2.5 text-xs font-bold transition',
+              tab === 'theme' ? 'bg-pink-100 text-pink-950 border-b-2 border-pink-500' : 'text-pink-700/70 hover:text-pink-900'
             )}
           >
             🎨 Tema Warna
           </button>
           <button onClick={() => setTab('mascot')}
-            className={cn('flex-1 py-2 text-xs font-bold transition',
-              tab === 'mascot' ? 'bg-white/20 text-white border-b-2 border-pink-300' : 'text-white/60 hover:text-white'
+            className={cn('flex-1 py-2.5 text-xs font-bold transition',
+              tab === 'mascot' ? 'bg-pink-100 text-pink-950 border-b-2 border-pink-500' : 'text-pink-700/70 hover:text-pink-900'
             )}
           >
             🐾 Maskot
@@ -500,9 +500,9 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-white/20 bg-white/5 shrink-0 rounded-b-3xl">
+        <div className="px-4 py-3 border-t border-pink-200/50 bg-white/40 shrink-0 rounded-b-3xl">
           <button onClick={onClose}
-            className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-2.5 px-4 rounded-xl border border-white/30 transition text-sm"
+            className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-sm"
           >
             Selesai
           </button>

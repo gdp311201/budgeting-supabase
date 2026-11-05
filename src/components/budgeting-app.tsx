@@ -139,6 +139,23 @@ export default function BudgetingApp({
 
   const mascotEmoji = profile?.icon_name ? (MASCOT_EMOJIS[profile.icon_name] ?? '🐘') : '🐘'
 
+  // Fetch mascot icon_url from mascots table
+  const [mascotIconUrl, setMascotIconUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!profile?.icon_name) return
+    async function fetchMascotIcon() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('mascots')
+        .select('icon_url')
+        .eq('id', profile.icon_name)
+        .single()
+      if (data?.icon_url) setMascotIconUrl(data.icon_url)
+    }
+    fetchMascotIcon()
+  }, [profile?.icon_name])
+
   // Main app state (tabs + setup)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [showSetup, setShowSetup] = useState(appState === 'setting')
@@ -231,7 +248,11 @@ export default function BudgetingApp({
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
       >
         <div className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-pink-200/70 shadow-sm">
-          <span className="text-base">{mascotEmoji}</span>
+          {mascotIconUrl ? (
+            <img src={mascotIconUrl} alt="Mascot" className="w-5 h-5 object-contain" />
+          ) : (
+            <span className="text-base">{mascotEmoji}</span>
+          )}
           <span className="text-xs font-semibold text-pink-950/80 tracking-wide">
             {profile?.app_name ?? 'Budgeting Master Sync'}
           </span>
@@ -274,7 +295,7 @@ export default function BudgetingApp({
       {/* Main content */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
         <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
-          <DashboardView user={user} mascotEmoji={mascotEmoji} nickname={profile?.full_name} />
+          <DashboardView user={user} mascotEmoji={mascotEmoji} mascotIconUrl={mascotIconUrl} nickname={profile?.full_name} />
         </div>
         <div className={activeTab === 'input' ? 'block' : 'hidden'}>
           <InputView user={user} />

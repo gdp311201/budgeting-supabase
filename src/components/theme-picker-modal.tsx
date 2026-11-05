@@ -214,7 +214,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
             }}
           >
             <div className="text-2xl mb-1">{previewTheme?.emoji}</div>
-            <p className="text-xs font-bold text-white drop-shadow-lg">{previewTheme?.name}</p>
+            <p className="text-xs font-bold text-black drop-shadow-sm">{previewTheme?.name}</p>
           </div>
           <div className="space-y-2">
             <a href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20upgrade%20ke%20Premium" target="_blank" rel="noopener noreferrer"
@@ -247,9 +247,9 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/20 backdrop-blur-2xl saturate-150 w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/30">
+      <div className="bg-white/85 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[85vh] animate-pop border border-white/50">
         {/* Header — compact */}
-        <div className="px-5 py-3 border-b border-white/20 flex items-center justify-between bg-gradient-to-r from-pink-500/80 to-rose-500/80 rounded-t-3xl shrink-0">
+        <div className="px-5 py-3 border-b border-pink-200/40 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 rounded-t-3xl shrink-0">
           <div>
             <h3 className="text-sm font-bold text-white tracking-wide drop-shadow-lg">🎨 Personalisasi</h3>
             <p className="text-[10px] text-white/90 font-semibold mt-0.5 drop-shadow">Pilih tema & maskot favoritmu</p>
@@ -319,7 +319,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                                 <span className="absolute top-1 left-1 text-[10px] bg-white text-pink-600 rounded-full px-1.5 py-0.5 font-bold">✓</span>
                               )}
                               <div className="text-3xl mb-1">{theme.emoji}</div>
-                              <p className="text-xs font-bold text-white drop-shadow-lg">{theme.name}</p>
+                              <p className="text-xs font-bold text-black drop-shadow-sm">{theme.name}</p>
                             </div>
                           </button>
                         )
@@ -357,9 +357,9 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                                 <span className="absolute top-1 left-1 text-[10px] bg-white text-pink-600 rounded-full px-1.5 py-0.5 font-bold">✓</span>
                               )}
                               <div className="text-3xl mb-1">{theme.emoji}</div>
-                              <p className="text-xs font-bold text-white drop-shadow-lg">{theme.name}</p>
+                              <p className="text-xs font-bold text-black drop-shadow-sm">{theme.name}</p>
                               {!isPremium && (
-                                <p className="text-[8px] text-white/70 mt-0.5 drop-shadow">{isSelected ? 'Aktif' : 'Klik untuk preview'}</p>
+                                <p className="text-[8px] text-black/70 mt-0.5 drop-shadow-sm">{isSelected ? 'Aktif' : 'Klik untuk preview'}</p>
                               )}
                             </div>
                           </button>
@@ -410,7 +410,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                                 ) : (
                                   <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
                                 )}
-                                <p className="text-xs font-bold text-white text-center drop-shadow-lg">{mascot.name}</p>
+                                <p className="text-xs font-bold text-black text-center drop-shadow-sm">{mascot.name}</p>
                               </div>
                             </button>
                           )
@@ -447,7 +447,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                               ) : (
                                 <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
                               )}
-                              <p className="text-xs font-bold text-white text-center drop-shadow-lg">{mascot.name}</p>
+                              <p className="text-xs font-bold text-black text-center drop-shadow-sm">{mascot.name}</p>
                             </div>
                           </button>
                         )
@@ -486,7 +486,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
                               ) : (
                                 <div className="text-4xl mb-1 text-center">{mascot.emoji}</div>
                               )}
-                              <p className="text-xs font-bold text-white text-center drop-shadow-lg">{mascot.name}</p>
+                              <p className="text-xs font-bold text-black text-center drop-shadow-sm">{mascot.name}</p>
                             </div>
                           </button>
                         )

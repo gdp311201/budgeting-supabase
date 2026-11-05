@@ -157,6 +157,58 @@ export default function BudgetingApp({
     fetchMascotIcon()
   }, [profile?.icon_name])
 
+  // Dynamic favicon + apple-touch-icon + manifest (per user)
+  useEffect(() => {
+    const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
+    const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/Growsphere%20Logo%20with%20Leaf%20or%20Arrow%20Icon%20(1).png'
+
+    const iconUrl = profile?.icon_name === 'elephant' ? ELEPHANT_ICON : GDP_LOGO
+    const appName = profile?.app_name ?? 'Budgeting Master Sync'
+
+    // Update favicon (browser tab)
+    let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement
+    if (!favicon) {
+      favicon = document.createElement('link')
+      favicon.rel = 'icon'
+      document.head.appendChild(favicon)
+    }
+    favicon.href = iconUrl
+
+    // Update apple-touch-icon (iOS home screen)
+    let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement
+    if (!appleIcon) {
+      appleIcon = document.createElement('link')
+      appleIcon.rel = 'apple-touch-icon'
+      document.head.appendChild(appleIcon)
+    }
+    appleIcon.href = iconUrl
+
+    // Dynamic manifest (Android PWA home screen)
+    const manifest = {
+      name: appName,
+      short_name: 'Budgeting',
+      start_url: '/',
+      display: 'standalone',
+      background_color: '#d8b0c0',
+      theme_color: '#ec4899',
+      icons: [
+        { src: iconUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: iconUrl, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ]
+    }
+    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' })
+    const manifestUrl = URL.createObjectURL(manifestBlob)
+    let manifestLink = document.querySelector("link[rel='manifest']") as HTMLLinkElement
+    if (!manifestLink) {
+      manifestLink = document.createElement('link')
+      manifestLink.rel = 'manifest'
+      document.head.appendChild(manifestLink)
+    }
+    manifestLink.href = manifestUrl
+  }, [profile?.icon_name, profile?.app_name])
+
   // Main app state (tabs + setup)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
   const [showSetup, setShowSetup] = useState(appState === 'setting')

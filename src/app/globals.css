@@ -305,7 +305,7 @@
     background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
-    filter: blur(calc(var(--blur-wallpaper) + 2px)) brightness(calc(var(--dim-wallpaper) * 0.65));
+    filter: blur(calc(var(--blur-wallpaper) + 1px)) brightness(calc(var(--dim-wallpaper) * 0.82));
     animation: var(--wallpaper-motion, none) var(--wallpaper-motion-speed, 45s) ease-in-out infinite;
     will-change: transform;
   }

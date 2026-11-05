@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { getEReceipt, type ReceiptData } from '@/lib/api/receipt'
-import { formatRupiah, getCurrentMonth, getCurrentYear, cn } from '@/lib/utils/format'
+import { formatRupiah, getCurrentMonth, getCurrentYear, getTahunListDynamic, cn } from '@/lib/utils/format'
 
 const BULAN_LIST = [
   'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
@@ -46,15 +46,12 @@ export default function ReceiptView() {
   async function downloadReceiptAsImage() {
     if (!receiptPaperRef.current) return
 
-    // Check if html2canvas is loaded
-    if (typeof window === 'undefined' || !(window as any).html2canvas) {
-      alert('Library html2canvas belum dimuat. Tambahkan script tag di layout.tsx')
-      return
-    }
-
     setDownloading(true)
 
     try {
+      // Dynamic import html2canvas-pro (supports oklch/lab colors from Tailwind 4)
+      const { default: html2canvas } = await import('html2canvas-pro')
+
       const fileName = `E-Receipt_${BULAN_LIST[month - 1]}_${year}.png`
       const receiptPaper = receiptPaperRef.current
 
@@ -66,7 +63,6 @@ export default function ReceiptView() {
       receiptPaper.style.maxHeight = 'none'
       receiptPaper.style.overflowY = 'visible'
 
-      const html2canvas = (window as any).html2canvas
       const canvas = await html2canvas(receiptPaper, {
         scale: 2,
         useCORS: true,
@@ -167,7 +163,7 @@ export default function ReceiptView() {
               onChange={(e) => setYear(Number(e.target.value))}
               className="w-full bg-white/80 border border-pink-200 rounded-xl py-1.5 px-2 font-semibold text-xs"
             >
-              {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+              {getTahunListDynamic().map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
@@ -313,7 +309,7 @@ function ReceiptGroup({
   colorClass,
 }: {
   label: string
-  items: { kategori: string; subKategori: string; nominal: number }[]
+  items: { kategori: string; kategori_icon: string | null; subKategori: string; nominal: number }[]
   colorClass: string
 }) {
   if (!items || items.length === 0) return null
@@ -331,8 +327,9 @@ function ReceiptGroup({
           className="flex justify-between items-start text-xs py-1.5 border-b border-gray-100/60"
         >
           <div className="pr-2 flex-1 min-w-0">
-            <div className="font-bold text-gray-800 truncate">{item.kategori}</div>
-            <div className="text-[10px] text-gray-500 truncate">{item.subKategori}</div>
+            <div className="font-bold text-gray-800 truncate">
+              {item.kategori_icon ? `${item.kategori_icon} ` : ''}{item.subKategori || item.kategori}
+            </div>
           </div>
           <div className="font-mono font-semibold text-gray-700 whitespace-nowrap">
             {formatRupiah(item.nominal)}

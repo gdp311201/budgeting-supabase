@@ -46,6 +46,21 @@ export function getTahunList(from = 2024, to?: number) {
   return years
 }
 
+/**
+ * Dynamic year list: from signupYear to currentYear + 1
+ * Returns descending (newest first)
+ */
+export function getTahunListDynamic(signupYear: number = 2024): number[] {
+  const currentYear = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' })
+  ).getFullYear()
+  const endYear = currentYear + 1
+  const startYear = Math.min(signupYear, 2024)
+  const years: number[] = []
+  for (let y = endYear; y >= startYear; y--) years.push(y)
+  return years
+}
+
 export function nowWIB(): string {
   try {
     return (

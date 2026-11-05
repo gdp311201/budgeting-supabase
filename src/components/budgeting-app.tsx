@@ -40,8 +40,8 @@ interface GlassSettings {
 
 const MASCOT_EMOJIS: Record<string, string> = {
   elephant: '🐘', cat: '🐱', butterfly: '🦋', rabbit: '🐰',
-  fox: '🦊', panda: '🐼', moon: '🌙', unicorn: '🦄',
-  sakura: '🌸', star: '⭐',
+  fox: '🦊', panda: '🐼', owl: '🦉', unicorn: '🦄',
+  bear: '🐻', dog: '🐶',
 }
 
 const PIN_STORAGE_KEY = 'bms_pin_hash'

@@ -5,7 +5,7 @@ interface Props {
   onNavigate: (view: 'dashboard' | 'cara-pakai' | 'setting') => void
 }
 
-const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/Growsphere%20Logo%20with%20Leaf%20or%20Arrow%20Icon%20(1).png'
+const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
 
 export default function WelcomePage({ nickname, onNavigate }: Props) {
   return (

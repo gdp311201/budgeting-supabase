@@ -66,9 +66,10 @@ export default function BudgetingApp({
 
   // App state flow: PIN → Welcome → Dashboard/CaraPakai/Setting
   const [appState, setAppState] = useState<AppState>(() => {
-    const pinHash = typeof window !== 'undefined' ? localStorage.getItem(PIN_STORAGE_KEY) : null
+    if (typeof window === 'undefined') return 'welcome'
+    const pinHash = localStorage.getItem(PIN_STORAGE_KEY)
     if (pinHash) return 'pin-lock'
-    return 'welcome'
+    return 'pin-setup'  // ← FIX: no PIN = go to PIN setup (not welcome)
   })
 
   // Fetch updated profile when refreshKey changes

@@ -5,6 +5,8 @@ interface Props {
   onNavigate: (view: 'dashboard' | 'cara-pakai' | 'setting') => void
 }
 
+const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/Growsphere%20Logo%20with%20Leaf%20or%20Arrow%20Icon%20(1).png'
+
 export default function WelcomePage({ nickname, onNavigate }: Props) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative">
@@ -13,21 +15,17 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
       <div className="wallpaper-veil" aria-hidden="true" />
 
       <div className="relative z-10 w-full max-w-sm text-center space-y-6">
-        {/* GDP Text Logo */}
+        {/* GDP Logo + Subtitle */}
         <div>
-          <h1
-            className="text-5xl font-black tracking-[0.15em] mb-1"
-            style={{
-              background: 'linear-gradient(135deg, #ec4899 0%, #f43f5e 50%, #ec4899 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(0 2px 8px rgba(236, 72, 153, 0.3))',
-            }}
-          >
-            GDP
-          </h1>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-pink-700/60">
+          <div className="w-[60px] h-[60px] mx-auto mb-2">
+            <img
+              src={GDP_LOGO}
+              alt="GDP"
+              className="w-full h-full object-contain"
+              style={{ filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))' }}
+            />
+          </div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-black">
             Personal Budgeting
           </p>
         </div>

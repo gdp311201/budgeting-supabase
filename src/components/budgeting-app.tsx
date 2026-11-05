@@ -160,7 +160,7 @@ export default function BudgetingApp({
   // Dynamic favicon + apple-touch-icon + manifest (per user)
   useEffect(() => {
     const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
-    const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/Growsphere%20Logo%20with%20Leaf%20or%20Arrow%20Icon%20(1).png'
+    const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
 
     const iconUrl = profile?.icon_name === 'elephant' ? ELEPHANT_ICON : GDP_LOGO
     const appName = profile?.app_name ?? 'Budgeting Master Sync'
@@ -407,7 +407,7 @@ export default function BudgetingApp({
       <FeedbackModal
         open={showFeedback}
         onClose={() => setShowFeedback(false)}
-        waLink="https://wa.me/6281575859792?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App"
+        waLink="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App"
       />
     </div>
   )

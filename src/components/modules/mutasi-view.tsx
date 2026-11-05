@@ -7,7 +7,7 @@ import {
   groupAccountsByType,
   type SetupMaster,
 } from '@/lib/api/setup-master'
-import { formatRupiah, cn, getCurrentMonth, getCurrentYear } from '@/lib/utils/format'
+import { formatRupiah, cn, getCurrentMonth, getCurrentYear, getTahunListDynamic } from '@/lib/utils/format'
 
 const BULAN_LIST = [
   'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
@@ -157,6 +157,7 @@ export default function MutasiView() {
               onChange={(e) => setMonth(Number(e.target.value))}
               className="w-full bg-white/80 border border-pink-200 rounded-xl py-1.5 px-2 font-semibold text-xs"
             >
+              <option value={0}>SEMUA</option>
               {BULAN_LIST.map((b, i) => (
                 <option key={b} value={i + 1}>{b}</option>
               ))}
@@ -169,7 +170,7 @@ export default function MutasiView() {
               onChange={(e) => setYear(Number(e.target.value))}
               className="w-full bg-white/80 border border-pink-200 rounded-xl py-1.5 px-2 font-semibold text-xs"
             >
-              {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+              {getTahunListDynamic().map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>

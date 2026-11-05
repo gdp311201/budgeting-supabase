@@ -291,7 +291,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
-  /* Wallpaper background with ken burns motion */
+  /* Wallpaper background with ken burns motion + blur for elegance */
   .wallpaper-bg {
     position: fixed;
     inset: -40px;
@@ -305,22 +305,23 @@
     background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
-    filter: blur(var(--blur-wallpaper)) brightness(var(--dim-wallpaper));
+    filter: blur(calc(var(--blur-wallpaper) + 2px)) brightness(calc(var(--dim-wallpaper) * 0.65));
     animation: var(--wallpaper-motion, none) var(--wallpaper-motion-speed, 45s) ease-in-out infinite;
     will-change: transform;
   }
 
+  /* Darker veil for text readability — keeps wallpaper visible but subtle */
   .wallpaper-veil {
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    opacity: var(--veil-strength);
+    opacity: 1;
     background: linear-gradient(
       165deg,
-      rgba(255, 246, 250, 0.45) 0%,
-      rgba(255, 246, 250, 0.20) 42%,
-      rgba(216, 176, 192, 0.34) 100%
+      rgba(255, 246, 250, 0.55) 0%,
+      rgba(255, 246, 250, 0.30) 42%,
+      rgba(216, 176, 192, 0.44) 100%
     );
   }
 

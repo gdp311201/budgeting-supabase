@@ -101,7 +101,7 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
       {!data && !error && (
         <div className="text-center py-12 bg-white/40 rounded-2xl border border-pink-200/60">
           {mascotIconUrl ? (
-            <img src={mascotIconUrl} alt="Mascot" className="w-12 h-12 mx-auto mb-2 object-contain" />
+            <img src={mascotIconUrl} alt="Mascot" className="w-[105px] h-[105px] mx-auto mb-2 object-contain drop-shadow-lg" />
           ) : (
             <div className="text-4xl mb-2">{mascotEmoji ?? '🐘'}</div>
           )}

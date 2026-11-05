@@ -228,7 +228,8 @@ export default function SetupView({ user, onClose }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-pink-950/40 backdrop-blur-[5px] overflow-y-auto">
+    <div className="w-full max-w-md my-8 space-y-4">
       {/* Header with Edit Mode Toggle */}
       <div className="pb-2 border-b border-pink-200/50 flex items-center justify-between">
         <div>
@@ -606,6 +607,7 @@ export default function SetupView({ user, onClose }: Props) {
           }}
         />
       )}
+    </div>
     </div>
   )
 }

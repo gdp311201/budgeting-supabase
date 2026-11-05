@@ -5,6 +5,8 @@ interface Props {
   onNavigate: (view: 'dashboard' | 'cara-pakai' | 'setting') => void
 }
 
+const GROWSPHERE_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/Growsphere%20Logo%20with%20Leaf%20or%20Arrow%20Icon%20(1).png'
+
 export default function WelcomePage({ nickname, onNavigate }: Props) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative">
@@ -13,9 +15,16 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
       <div className="wallpaper-veil" aria-hidden="true" />
 
       <div className="relative z-10 w-full max-w-sm text-center space-y-6">
-        {/* Greeting */}
+        {/* Greeting with Growsphere Logo */}
         <div>
-          <div className="text-5xl mb-2 animate-pulse">🐘</div>
+          <div className="w-[60px] h-[60px] mx-auto mb-2">
+            <img
+              src={GROWSPHERE_LOGO}
+              alt="Growsphere"
+              className="w-full h-full object-contain drop-shadow-lg"
+              style={{ filter: 'drop-shadow(0 0 12px rgba(236, 72, 153, 0.4))' }}
+            />
+          </div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-pink-700/70">
             Selamat Datang
           </p>
@@ -70,9 +79,14 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
         </div>
 
         {/* Footer */}
-        <p className="text-[10px] text-pink-800/40 mt-8">
-          Budgeting Master Sync · Made with ❤️
-        </p>
+        <div className="text-center mt-8">
+          <p className="text-[11px] font-bold text-pink-800/60">
+            Growsphere Digital Product
+          </p>
+          <p className="text-[10px] text-pink-700/50 mt-0.5">
+            by : Julyo Sechar
+          </p>
+        </div>
       </div>
     </div>
   )

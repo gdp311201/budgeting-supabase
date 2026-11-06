@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BudgetingApp from '@/components/budgeting-app'
 import SetupRequired from '@/components/setup-required'
-import AdminPanelWrapper from '@/components/admin-panel-wrapper'
 
 export default async function Home({
   searchParams,
@@ -24,58 +23,18 @@ export default async function Home({
     return <SetupRequired />
   }
 
+  // ============================================================
+  // ADMIN ROUTE — redirect old URL (?admin=1) to new /admin route
+  // (Sprint 2A: Admin panel sekarang di route terpisah /admin)
+  // ============================================================
+  if (isAdminRoute) {
+    redirect('/admin')
+  }
+
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
-  // ============================================================
-  // ADMIN ROUTE — render AdminPanel directly
-  // ============================================================
-  if (isAdminRoute) {
-    if (!user) {
-      redirect('/login?redirect=/?admin=1')
-    }
-
-    // Check 1: ADMIN_EMAILS env var (legacy method)
-    const adminEmails = (process.env.ADMIN_EMAILS ?? '')
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean)
-    const isAdminByEmail = adminEmails.includes((user.email ?? '').toLowerCase())
-
-    // Check 2: profiles.is_admin flag (new method, more reliable)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin, tier')
-      .eq('id', user.id)
-      .single()
-    const isAdminByFlag = profile?.is_admin === true || profile?.tier === 'admin'
-
-    // Allow if EITHER check passes
-    if (!isAdminByEmail && !isAdminByFlag) {
-      return (
-        <main className="min-h-screen flex items-center justify-center bg-rose-50 p-4">
-          <div className="text-center">
-            <div className="text-5xl mb-3">🚫</div>
-            <h1 className="text-2xl font-bold text-rose-900">Akses Ditolak</h1>
-            <p className="text-sm text-rose-700 mt-2">
-              Halaman ini khusus admin. Email Anda ({user.email}) tidak terdaftar sebagai admin.
-            </p>
-            <a
-              href="/"
-              className="inline-block mt-4 text-rose-700 hover:text-rose-900 font-semibold underline text-sm"
-            >
-              ← Kembali ke Dashboard
-            </a>
-          </div>
-        </main>
-      )
-    }
-
-    // ✅ User is admin — render admin panel
-    return <AdminPanelWrapper />
-  }
 
   // ============================================================
   // REGULAR ROUTE — render BudgetingApp

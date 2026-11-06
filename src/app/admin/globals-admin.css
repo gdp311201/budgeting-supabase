@@ -1,0 +1,77 @@
+/* ============================================================
+   Admin Panel — Dark Glassmorphism Theme
+   Path: src/app/admin/globals-admin.css
+   ============================================================ */
+
+:root {
+  /* Color palette — dark slate */
+  --admin-bg: #0f172a;          /* slate-900 */
+  --admin-bg-2: #1e293b;          /* slate-800 */
+  --admin-card: rgba(30, 41, 59, 0.6);  /* slate-800/60 with blur */
+  --admin-border: rgba(148, 163, 184, 0.2);  /* slate-400/20 */
+  --admin-text: #f1f5f9;          /* slate-100 */
+  --admin-text-muted: #94a3b8;    /* slate-400 */
+  --admin-text-dim: #64748b;      /* slate-500 */
+  --admin-primary: #06b6d4;       /* cyan-500 */
+  --admin-primary-hover: #0891b2;  /* cyan-600 */
+  --admin-success: #10b981;        /* emerald-500 */
+  --admin-warning: #f59e0b;        /* amber-500 */
+  --admin-danger: #ef4444;         /* red-500 */
+  --admin-purple: #8b5cf6;         /* violet-500 */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Background: subtle radial gradient + slate */
+body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6, 182, 212, 0.15), transparent),
+    radial-gradient(ellipse 80% 50% at 50% 120%, rgba(139, 92, 246, 0.1), transparent),
+    var(--admin-bg);
+}
+
+/* Glass card */
+.admin-glass {
+  background: var(--admin-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--admin-border);
+}
+
+/* Scrollbar styling */
+.admin-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.admin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+}
+.admin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Safe area for iPhone */
+.admin-safe-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 12px);
+}
+.admin-safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
+}

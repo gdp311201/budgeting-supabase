@@ -1,17 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import {
-  listWhitelist,
-  addToWhitelist,
-  removeFromWhitelist,
-  reactivateInWhitelist,
-  deleteFromWhitelist,
-  grantMascotAccess,
-} from '@/lib/api/whitelist'
 import type { Database } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
-import { TIER_INFO, type Tier, formatPrice } from '@/lib/constants/tiers'
+import { TIER_INFO, type Tier } from '@/lib/constants/tiers'
 
 type AllowedEmail = Database['public']['Tables']['allowed_emails']['Row']
 
@@ -149,8 +141,10 @@ export default function AdminPanel({ onClose }: Props) {
     setWhitelistLoading(true)
     setWhitelistError(null)
     try {
-      const data = await listWhitelist()
-      setWhitelist(data)
+      const res = await fetch('/api/admin/whitelist')
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to load whitelist')
+      setWhitelist(json.whitelist ?? [])
     } catch (err: any) {
       setWhitelistError(err.message ?? 'Failed to load whitelist')
     } finally {
@@ -242,14 +236,20 @@ export default function AdminPanel({ onClose }: Props) {
     setSubmitting(true)
     setWhitelistError(null)
     try {
-      await addToWhitelist({
-        email: newEmail,
-        full_name: newName,
-        is_premium: newPremium,
-        assigned_theme: newTheme || undefined,
-        assigned_mascot: newMascot || undefined,
-        notes: newNotes,
+      const res = await fetch('/api/admin/whitelist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newEmail,
+          full_name: newName,
+          is_premium: newPremium,
+          assigned_theme: newTheme || undefined,
+          assigned_mascot: newMascot || undefined,
+          notes: newNotes,
+        }),
       })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to add email')
       setNewEmail('')
       setNewName('')
       setNewPremium(false)
@@ -267,7 +267,13 @@ export default function AdminPanel({ onClose }: Props) {
   async function handleDeactivate(email: string) {
     if (!confirm(`Deactivate ${email}? User tidak akan bisa login lagi.`)) return
     try {
-      await removeFromWhitelist(email)
+      const res = await fetch('/api/admin/whitelist/deactivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
       await loadWhitelist()
     } catch (err: any) {
       alert('Error: ' + err.message)
@@ -276,7 +282,13 @@ export default function AdminPanel({ onClose }: Props) {
 
   async function handleReactivate(email: string) {
     try {
-      await reactivateInWhitelist(email)
+      const res = await fetch('/api/admin/whitelist/reactivate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
       await loadWhitelist()
     } catch (err: any) {
       alert('Error: ' + err.message)
@@ -286,7 +298,13 @@ export default function AdminPanel({ onClose }: Props) {
   async function handleDelete(email: string) {
     if (!confirm(`HAPUS PERMANEN ${email}? Tidak bisa di-undo.`)) return
     try {
-      await deleteFromWhitelist(email)
+      const res = await fetch('/api/admin/whitelist/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
       await loadWhitelist()
     } catch (err: any) {
       alert('Error: ' + err.message)
@@ -296,7 +314,13 @@ export default function AdminPanel({ onClose }: Props) {
   async function handleGrantElephant(email: string) {
     if (!confirm(`Beri akses maskot Gajah ke ${email}? (Eksklusif)`)) return
     try {
-      await grantMascotAccess('elephant', email)
+      const res = await fetch('/api/admin/whitelist/grant-mascot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, mascotId: 'elephant' }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
       alert('✅ Akses gajah diberikan ke ' + email)
     } catch (err: any) {
       alert('Error: ' + err.message)

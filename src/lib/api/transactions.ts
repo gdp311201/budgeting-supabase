@@ -1,8 +1,7 @@
 /**
- * API: TRANSACTIONS
- * Abstraction layer for transaction CRUD operations.
- * If you ever migrate from Supabase to another backend,
- * you only change this file — frontend stays the same.
+ * API: TRANSACTIONS — with optional targetUserId for shared access
+ *
+ * @path src/lib/api/transactions.ts
  */
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
@@ -11,11 +10,20 @@ type Transaction = Database['public']['Tables']['transactions']['Row']
 type TransactionInsert = Database['public']['Tables']['transactions']['Insert']
 type TransactionUpdate = Database['public']['Tables']['transactions']['Update']
 
-export async function createTransaction(data: TransactionInsert) {
+/**
+ * Create a new transaction.
+ * If targetUserId is provided, transaction.user_id will be set to that user (shared access mode).
+ * Otherwise, transaction.user_id stays as-is (own data).
+ */
+export async function createTransaction(
+  data: TransactionInsert,
+  targetUserId?: string
+) {
   const supabase = createClient()
+  const insertData = targetUserId ? { ...data, user_id: targetUserId } : data
   const { data: result, error } = await supabase
     .from('transactions')
-    .insert(data)
+    .insert(insertData)
     .select()
     .single()
   if (error) throw new Error(error.message)

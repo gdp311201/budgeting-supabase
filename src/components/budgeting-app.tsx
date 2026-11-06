@@ -167,7 +167,7 @@ export default function BudgetingApp({
   }, [profile])
 
   const mascotEmoji = profile?.icon_name ? (MASCOT_EMOJIS[profile.icon_name] ?? '🐘') : '🐘'
-  const [ascotIconUrl, setMascotIconUrl] = useState<string | null>(null)
+  const [mascotIconUrl, setMascotIconUrl] = useState<string | null>(null)
   useEffect(() => {
     if (!profile?.icon_name) return
     const supabase = createClient()

@@ -158,11 +158,16 @@ export default function BudgetingApp({
   }, [profile])
 
   // Dynamic favicon + apple-touch-icon + manifest (per user)
+  // Sprint 1 Fix: Elephant favicon is EXCLUSIVE to Elsa only.
+  // All other users (including Julyo/admin) get GDP logo.
   useEffect(() => {
     const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
     const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
 
-    const ELEPHANT_FAVICON_EMAILS = ['elsakristya19@gmail.com'] const isElephantFaviconUser = ELEPHANT_FAVICON_EMAILS.includes(user.email ?? '') const iconUrl = isElephantFaviconUser ? ELEPHANT_ICON : GDP_LOGO
+    // Only Elsa gets elephant favicon — hardcoded by email
+    const ELEPHANT_FAVICON_EMAILS = ['elsakristya19@gmail.com']
+    const isElephantFaviconUser = ELEPHANT_FAVICON_EMAILS.includes(user.email ?? '')
+    const iconUrl = isElephantFaviconUser ? ELEPHANT_ICON : GDP_LOGO
     const appName = profile?.app_name ?? 'Budgeting Master Sync'
 
     // Update favicon (browser tab)

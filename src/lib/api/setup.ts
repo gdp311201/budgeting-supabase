@@ -1,5 +1,7 @@
 /**
- * API: SETUP — get setup data + CRUD operations
+ * API: SETUP — with optional targetUserId for shared access
+ *
+ * @path src/lib/api/setup.ts
  */
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
@@ -28,22 +30,38 @@ export interface SetupData {
   message?: string
 }
 
-export async function getSetupData(): Promise<SetupData> {
+/**
+ * Fetch setup data (accounts, categories, subcategories, budgets).
+ * @param targetUserId - Optional. If provided, fetch for this user (shared access).
+ */
+export async function getSetupData(targetUserId?: string): Promise<SetupData> {
   const supabase = createClient()
-  const { data, error } = await supabase.rpc('get_setup_data')
+  const params: Record<string, any> = {}
+  if (targetUserId) {
+    params.p_target_user_id = targetUserId
+  }
+  const { data, error } = await supabase.rpc('get_setup_data', params)
   if (error) throw new Error(error.message)
   return data as SetupData
 }
 
 // ============================================================
-// ACCOUNTS — CRUD
+// ACCOUNTS — CRUD (targetUserId-aware)
 // ============================================================
 
-export async function addAccount(account: AccountInsert): Promise<Account> {
+/**
+ * Add a new account.
+ * If targetUserId is provided, account will be inserted for that user (shared access).
+ */
+export async function addAccount(
+  account: AccountInsert,
+  targetUserId?: string
+): Promise<Account> {
   const supabase = createClient()
+  const insertData = targetUserId ? { ...account, user_id: targetUserId } : account
   const { data, error } = await supabase
     .from('accounts')
-    .insert(account)
+    .insert(insertData)
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -72,11 +90,15 @@ export async function deleteAccount(id: string): Promise<void> {
 // CATEGORIES — CRUD
 // ============================================================
 
-export async function addCategory(category: CategoryInsert): Promise<Category> {
+export async function addCategory(
+  category: CategoryInsert,
+  targetUserId?: string
+): Promise<Category> {
   const supabase = createClient()
+  const insertData = targetUserId ? { ...category, user_id: targetUserId } : category
   const { data, error } = await supabase
     .from('categories')
-    .insert(category)
+    .insert(insertData)
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -109,11 +131,15 @@ export async function deleteCategory(id: string): Promise<void> {
  * Add subcategory. If parent category is 'investment', auto-create
  * a matching investment account (linked by name).
  */
-export async function addSubcategory(sub: SubcategoryInsert): Promise<Subcategory> {
+export async function addSubcategory(
+  sub: SubcategoryInsert,
+  targetUserId?: string
+): Promise<Subcategory> {
   const supabase = createClient()
+  const insertData = targetUserId ? { ...sub, user_id: targetUserId } : sub
   const { data, error } = await supabase
     .from('subcategories')
-    .insert(sub)
+    .insert(insertData)
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -124,24 +150,22 @@ export async function addSubcategory(sub: SubcategoryInsert): Promise<Subcategor
   const { data: cat } = await supabase
     .from('categories')
     .select('type')
-    .eq('id', sub.category_id)
+    .eq('id', insertData.category_id)
     .single()
 
   if (cat?.type === 'investment') {
     // Auto-create investment account with same name
     try {
-      await supabase
-        .from('accounts')
-        .insert({
-          user_id: sub.user_id,
-          name: newSub.name,
-          type: 'investment',
-          opening_balance: 0,
-          sort_order: 200,
-          is_active: true,
-          is_selected: true,
-          is_protected: false, // custom investment account, can be deleted
-        })
+      await supabase.from('accounts').insert({
+        user_id: insertData.user_id,
+        name: newSub.name,
+        type: 'investment',
+        opening_balance: 0,
+        sort_order: 200,
+        is_active: true,
+        is_selected: true,
+        is_protected: false,
+      })
     } catch (err) {
       console.warn('Failed to auto-create investment account:', err)
     }
@@ -169,7 +193,6 @@ export async function updateSubcategory(id: string, updates: SubcategoryUpdate):
 export async function deleteSubcategory(id: string): Promise<void> {
   const supabase = createClient()
 
-  // Get subcategory info before delete
   const { data: sub } = await supabase
     .from('subcategories')
     .select('user_id, name, category_id, is_custom')
@@ -178,20 +201,16 @@ export async function deleteSubcategory(id: string): Promise<void> {
 
   if (!sub) throw new Error('Subcategory not found')
 
-  // Check if parent is investment
   const { data: cat } = await supabase
     .from('categories')
     .select('type')
     .eq('id', sub.category_id)
     .single()
 
-  // Delete the subcategory
   const { error } = await supabase.from('subcategories').delete().eq('id', id)
   if (error) throw new Error(error.message)
 
-  // If parent is investment, try to delete matching account (custom only)
   if (cat?.type === 'investment' && sub.is_custom) {
-    // Find matching account
     const { data: acc } = await supabase
       .from('accounts')
       .select('id, is_protected')
@@ -201,23 +220,24 @@ export async function deleteSubcategory(id: string): Promise<void> {
       .single()
 
     if (acc && !acc.is_protected) {
-      // Try to delete (will fail if transactions reference it — that's OK)
       await supabase.from('accounts').delete().eq('id', acc.id)
     }
   }
 }
 
 // ============================================================
-// BUDGETS — upsert (set budget per subkategori per bulan/tahun)
+// BUDGETS — upsert (targetUserId-aware)
 // ============================================================
 
 export async function upsertBudget(
-  budget: BudgetInsert
+  budget: BudgetInsert,
+  targetUserId?: string
 ): Promise<Budget> {
   const supabase = createClient()
+  const insertData = targetUserId ? { ...budget, user_id: targetUserId } : budget
   const { data, error } = await supabase
     .from('budgets')
-    .upsert(budget, { onConflict: 'user_id,subcategory_id,month,year' })
+    .upsert(insertData, { onConflict: 'user_id,subcategory_id,month,year' })
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -242,9 +262,6 @@ export async function setDefaultBudget(
   })
 }
 
-/**
- * Get default budget (sticky) for a subcategory
- */
 export function getDefaultBudget(
   budgets: Budget[],
   subcategoryId: string
@@ -255,10 +272,6 @@ export function getDefaultBudget(
   return defaultBudget?.amount ?? 0
 }
 
-/**
- * Get effective budget for a subcategory in a specific month/year
- * Priority: monthly override > default
- */
 export function getEffectiveBudget(
   budgets: Budget[],
   subcategoryId: string,
@@ -295,7 +308,6 @@ export async function setAccountSelected(
 
 /**
  * Update opening balance of an investment account by name (auto-link)
- * Used when user edits opening balance of an investment subkategori
  */
 export async function updateInvestmentAccountByName(
   userId: string,
@@ -314,14 +326,12 @@ export async function updateInvestmentAccountByName(
 
 /**
  * Delete an investment account by name (auto-link, custom only)
- * Used when user deletes a custom investment subkategori
  */
 export async function deleteInvestmentAccountByName(
   userId: string,
   accountName: string
 ): Promise<void> {
   const supabase = createClient()
-  // Only delete if not protected (custom accounts)
   const { data: acc } = await supabase
     .from('accounts')
     .select('id, is_protected')

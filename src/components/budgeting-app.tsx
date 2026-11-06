@@ -16,7 +16,8 @@ import OnboardingModal from '@/components/onboarding-modal'
 import PinLockScreen from '@/components/pin-lock-screen'
 import WelcomePage from '@/components/welcome-page'
 import CaraPakai from '@/components/cara-pakai'
-import FeedbackModal from '@/components/feedback-modal'
+import AccountSwitcher from '@/components/account-switcher'
+import { getShareableUsers, type ShareableUser } from '@/lib/api/subscription'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -60,6 +61,11 @@ export default function BudgetingApp({
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
+  // ===== Shared access state (Batch 3) =====
+  const [activeUserId, setActiveUserId] = useState<string | null>(null) // null = my own data
+  const [shareableUsers, setShareableUsers] = useState<ShareableUser[]>([])
+  const [sharedAccessError, setSharedAccessError] = useState<string | null>(null)
+
   // Onboarding check (no full_name = need onboarding)
   const [showOnboarding, setShowOnboarding] = useState(
     () => !initialProfile?.full_name
@@ -70,7 +76,7 @@ export default function BudgetingApp({
     if (typeof window === 'undefined') return 'welcome'
     const pinHash = localStorage.getItem(PIN_STORAGE_KEY)
     if (pinHash) return 'pin-lock'
-    return 'pin-setup'  // ← FIX: no PIN = go to PIN setup (not welcome)
+    return 'pin-setup'
   })
 
   // Fetch updated profile when refreshKey changes
@@ -88,6 +94,33 @@ export default function BudgetingApp({
     fetchProfile()
   }, [refreshKey, user.id])
 
+  // ===== Fetch shareable users (Batch 3) =====
+  // Only fetch when user reaches main app (post PIN unlock)
+  useEffect(() => {
+    if (appState !== 'dashboard' && appState !== 'welcome') return
+    let cancelled = false
+    async function fetchShareable() {
+      try {
+        setSharedAccessError(null)
+        const users = await getShareableUsers()
+        if (!cancelled) setShareableUsers(users)
+      } catch (err: any) {
+        if (!cancelled) {
+          // Graceful fallback — if not premium, just no shareable users
+          if (!err.message?.includes('Premium tier required')) {
+            console.warn('Failed to load shareable users:', err.message)
+            setSharedAccessError(err.message)
+          }
+          setShareableUsers([])
+        }
+      }
+    }
+    fetchShareable()
+    return () => {
+      cancelled = true
+    }
+  }, [appState, user.id])
+
   // Apply theme from profile
   useEffect(() => {
     if (!profile) return
@@ -101,141 +134,78 @@ export default function BudgetingApp({
     if (palette.accent) {
       document.documentElement.style.setProperty('--theme-accent', palette.accent)
     }
-    if (palette.gradient && palette.gradient.length === 3) {
-      document.documentElement.style.setProperty('--theme-gradient-1', palette.gradient[0])
-      document.documentElement.style.setProperty('--theme-gradient-2', palette.gradient[1])
-      document.documentElement.style.setProperty('--theme-gradient-3', palette.gradient[2])
+    if (palette.gradient && palette.gradient.length > 0) {
+      document.documentElement.style.setProperty('--gradient-1', palette.gradient[0])
+      document.documentElement.style.setProperty('--gradient-2', palette.gradient[1] ?? palette.gradient[0])
+      document.documentElement.style.setProperty('--gradient-3', palette.gradient[2] ?? palette.gradient[0])
     }
 
-    if (glass.blur_wallpaper !== undefined) {
-      document.documentElement.style.setProperty('--blur-wallpaper', `${glass.blur_wallpaper}px`)
-    }
-    if (glass.dim_wallpaper !== undefined) {
-      document.documentElement.style.setProperty('--dim-wallpaper', String(glass.dim_wallpaper))
-    }
-    if (glass.blur_page !== undefined) {
-      document.documentElement.style.setProperty('--blur-page', `${glass.blur_page}px`)
-    }
-    if (glass.blur_nav !== undefined) {
-      document.documentElement.style.setProperty('--blur-nav', `${glass.blur_nav}px`)
-    }
-    if (glass.blur_mini !== undefined) {
-      document.documentElement.style.setProperty('--blur-mini', `${glass.blur_mini}px`)
-    }
-    if (glass.blur_card !== undefined) {
-      document.documentElement.style.setProperty('--blur-card', `${glass.blur_card}px`)
-    }
-    if (glass.blur_input !== undefined) {
-      document.documentElement.style.setProperty('--blur-input', `${glass.blur_input}px`)
-    }
+    document.documentElement.style.setProperty('--blur-wallpaper', `${glass.blur_wallpaper ?? 0}px`)
+    document.documentElement.style.setProperty('--dim-wallpaper', `${glass.dim_wallpaper ?? 0.75}`)
+    document.documentElement.style.setProperty('--blur-page', `${glass.blur_page ?? 3}px`)
+    document.documentElement.style.setProperty('--blur-nav', `${glass.blur_nav ?? 3}px`)
+    document.documentElement.style.setProperty('--blur-mini', `${glass.blur_mini ?? 12}px`)
+    document.documentElement.style.setProperty('--blur-card', `${glass.blur_card ?? 1.8}px`)
+    document.documentElement.style.setProperty('--blur-input', `${glass.blur_input ?? 8}px`)
 
-    if (profile.wallpaper_url) {
-      document.documentElement.style.setProperty('--theme-wallpaper', `url('${profile.wallpaper_url}')`)
-    }
+    // Set body background gradient
+    document.body.style.background = `linear-gradient(135deg, var(--gradient-1, #8a96a8), var(--gradient-2, #ba9eb1), var(--gradient-3, #e3b9ca))`
+  }, [profile])
 
-    if (profile.app_name) {
-      document.title = profile.app_name
+  // Dynamic favicon: VIP users get elephant icon, others get GDP logo
+  useEffect(() => {
+    if (!profile) return
+
+    let link = document.querySelector("link[rel='icon']") as HTMLLinkElement | null
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.appendChild(link)
     }
-  }, [profile, refreshKey])
+    // Default: GDP logo
+    link.href = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
+  }, [profile])
 
   const mascotEmoji = profile?.icon_name ? (MASCOT_EMOJIS[profile.icon_name] ?? '🐘') : '🐘'
-
-  // Fetch mascot icon_url from mascots table
-  const [mascotIconUrl, setMascotIconUrl] = useState<string | null>(null)
-
+  const [ascotIconUrl, setMascotIconUrl] = useState<string | null>(null)
   useEffect(() => {
     if (!profile?.icon_name) return
-    async function fetchMascotIcon() {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('mascots')
-        .select('icon_url')
-        .eq('id', profile.icon_name)
-        .single()
-      if (data?.icon_url) setMascotIconUrl(data.icon_url)
-    }
-    fetchMascotIcon()
+    const supabase = createClient()
+    supabase
+      .from('mascots')
+      .select('icon_url')
+      .eq('id', profile.icon_name)
+      .single()
+      .then(({ data }) => {
+        if (data?.icon_url) setMascotIconUrl(data.icon_url)
+      })
   }, [profile?.icon_name])
 
-  // Dynamic favicon + apple-touch-icon + manifest (per user)
-  useEffect(() => {
-    const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
-    const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
-
-    const iconUrl = profile?.icon_name === 'elephant' ? ELEPHANT_ICON : GDP_LOGO
-    const appName = profile?.app_name ?? 'Budgeting Master Sync'
-
-    // Update favicon (browser tab)
-    let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement
-    if (!favicon) {
-      favicon = document.createElement('link')
-      favicon.rel = 'icon'
-      document.head.appendChild(favicon)
-    }
-    favicon.href = iconUrl
-
-    // Update apple-touch-icon (iOS home screen)
-    let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement
-    if (!appleIcon) {
-      appleIcon = document.createElement('link')
-      appleIcon.rel = 'apple-touch-icon'
-      document.head.appendChild(appleIcon)
-    }
-    appleIcon.href = iconUrl
-
-    // Dynamic manifest (Android PWA home screen)
-    const manifest = {
-      name: appName,
-      short_name: 'Budgeting',
-      start_url: '/',
-      display: 'standalone',
-      background_color: '#d8b0c0',
-      theme_color: '#ec4899',
-      icons: [
-        { src: iconUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: iconUrl, sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-        { src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      ]
-    }
-    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' })
-    const manifestUrl = URL.createObjectURL(manifestBlob)
-    let manifestLink = document.querySelector("link[rel='manifest']") as HTMLLinkElement
-    if (!manifestLink) {
-      manifestLink = document.createElement('link')
-      manifestLink.rel = 'manifest'
-      document.head.appendChild(manifestLink)
-    }
-    manifestLink.href = manifestUrl
-  }, [profile?.icon_name, profile?.app_name])
-
-  // Main app state (tabs + setup)
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
-  const [showSetup, setShowSetup] = useState(appState === 'setting')
-  const [showFeedback, setShowFeedback] = useState(false)
+  const [showSetup, setShowSetup] = useState(false)
 
-  // ===== ONBOARDING ACTIVE =====
-  if (showOnboarding) {
+  // Handle onboarding completion
+  function handleOnboardingComplete(updatedProfile: Profile) {
+    setProfile(updatedProfile)
+    setShowOnboarding(false)
+  }
+
+  // ===== PIN lock screen =====
+  if (appState === 'pin-setup' || appState === 'pin-lock') {
     return (
-      <OnboardingModal
-        userId={user.id}
-        onComplete={(nickname) => {
-          setProfile(prev => prev ? { ...prev, full_name: nickname } : prev)
-          setShowOnboarding(false)
-          // After onboarding, go to PIN setup
-          setAppState('pin-setup')
-        }}
+      <PinLockScreen
+        mode={appState === 'pin-setup' ? 'setup' : 'unlock'}
+        onUnlocked={() => setAppState('welcome')}
       />
     )
   }
 
-  // ===== PIN LOCK / SETUP =====
-  if (appState === 'pin-lock' || appState === 'pin-setup') {
+  // ===== Onboarding modal =====
+  if (showOnboarding) {
     return (
-      <PinLockScreen
-        mode={appState === 'pin-setup' ? 'setup' : 'lock'}
-        onUnlock={() => setAppState('welcome')}
-        onSkip={() => setAppState('welcome')}
+      <OnboardingModal
+        user={user}
+        onComplete={handleOnboardingComplete}
       />
     )
   }
@@ -246,7 +216,7 @@ export default function BudgetingApp({
       <>
         <WelcomePage
           nickname={profile?.full_name}
-          onNavigate={(view) => setAppState(view)}
+          onNavigate={(view) => setAppState(view as AppState)}
         />
         {/* Floating buttons on welcome page */}
         <button
@@ -333,28 +303,26 @@ export default function BudgetingApp({
         </svg>
       </button>
 
-      {/* Floating Help button (top-left) → Cara Pakai */}
-      <button
-        onClick={() => setAppState('cara-pakai')}
-        className="fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white/70 backdrop-blur-md border border-pink-200/60 shadow-lg flex items-center justify-center hover:scale-110 transition"
-        style={{ top: 'max(env(safe-area-inset-top, 0px), 16px)' }}
-        aria-label="Cara Pakai"
-        title="Cara Pakai"
+      {/* ===== Account Switcher (Batch 3) — positioned top-right, below setting ===== */}
+      <div
+        className="fixed z-40"
+        style={{
+          top: 'max(env(safe-area-inset-top, 0px), 16px)',
+          right: '60px',  // offset from Setting button on the right
+        }}
       >
-        💡
-      </button>
-
-      {/* Floating Feedback button (bottom-right, above WhatsApp) */}
-      <button
-        onClick={() => setShowFeedback(true)}
-        className="fixed bottom-40 right-4 z-40 w-12 h-12 rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg flex items-center justify-center transition hover:scale-110"
-        aria-label="Kirim Feedback"
-        title="Kirim Feedback / Saran"
-      >
-        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-        </svg>
-      </button>
+        <AccountSwitcher
+          activeUserId={activeUserId}
+          shareableUsers={shareableUsers}
+          myEmail={user.email ?? ''}
+          myNickname={profile?.full_name ?? null}
+          onSwitch={(userId) => {
+            setActiveUserId(userId)
+            // Force refresh all data by bumping refreshKey
+            setRefreshKey((k) => k + 1)
+          }}
+        />
+      </div>
 
       {/* Floating WhatsApp button */}
       <a
@@ -369,22 +337,48 @@ export default function BudgetingApp({
         </svg>
       </a>
 
+      {/* Active account indicator banner (shown when viewing shared data) */}
+      {activeUserId !== null && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 bg-pink-500/90 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md">
+          📊 Viewing shared data — Read/Write mode
+        </div>
+      )}
+
       {/* Main content */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
         <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
-          <DashboardView user={user} mascotEmoji={mascotEmoji} mascotIconUrl={mascotIconUrl} nickname={profile?.full_name} />
+          <DashboardView
+            user={user}
+            mascotEmoji={mascotEmoji}
+            mascotIconUrl={mascotIconUrl}
+            nickname={profile?.full_name}
+            targetUserId={activeUserId ?? undefined}
+            refreshKey={refreshKey}
+          />
         </div>
         <div className={activeTab === 'input' ? 'block' : 'hidden'}>
-          <InputView user={user} />
+          <InputView
+            user={user}
+            targetUserId={activeUserId ?? undefined}
+          />
         </div>
         <div className={activeTab === 'mutasi' ? 'block' : 'hidden'}>
-          <MutasiView />
+          <MutasiView
+            targetUserId={activeUserId ?? undefined}
+            refreshKey={refreshKey}
+          />
         </div>
         <div className={activeTab === 'receipt' ? 'block' : 'hidden'}>
-          <ReceiptView />
+          <ReceiptView
+            targetUserId={activeUserId ?? undefined}
+            refreshKey={refreshKey}
+          />
         </div>
         <div className={activeTab === 'search' ? 'block' : 'hidden'}>
-          <SearchView />
+          <SearchView
+            targetUserId={activeUserId ?? undefined}
+            refreshKey={refreshKey}
+          />
         </div>
       </main>
 
@@ -393,7 +387,11 @@ export default function BudgetingApp({
 
       {/* Setup modal */}
       {showSetup && (
-        <SetupView user={user} onClose={() => setShowSetup(false)} />
+        <SetupView
+          user={user}
+          onClose={() => setShowSetup(false)}
+          targetUserId={activeUserId ?? undefined}
+        />
       )}
 
       {/* Theme picker modal */}
@@ -401,13 +399,6 @@ export default function BudgetingApp({
         open={showThemePicker}
         onClose={() => setShowThemePicker(false)}
         onApply={() => setRefreshKey((k) => k + 1)}
-      />
-
-      {/* Feedback modal */}
-      <FeedbackModal
-        open={showFeedback}
-        onClose={() => setShowFeedback(false)}
-        waLink="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App"
       />
     </div>
   )

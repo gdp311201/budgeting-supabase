@@ -162,7 +162,7 @@ export default function BudgetingApp({
     const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
     const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
 
-    const iconUrl = profile?.icon_name === 'elephant' ? ELEPHANT_ICON : GDP_LOGO
+    const ELEPHANT_FAVICON_EMAILS = ['elsakristya19@gmail.com'] const isElephantFaviconUser = ELEPHANT_FAVICON_EMAILS.includes(user.email ?? '') const iconUrl = isElephantFaviconUser ? ELEPHANT_ICON : GDP_LOGO
     const appName = profile?.app_name ?? 'Budgeting Master Sync'
 
     // Update favicon (browser tab)

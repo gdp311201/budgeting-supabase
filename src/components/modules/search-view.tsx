@@ -15,7 +15,7 @@ import {
 } from '@/lib/api/setup-master'
 import { updateTransaction, deleteTransaction } from '@/lib/api/transactions'
 import type { Database } from '@/lib/types/database'
-import { formatRupiah, parseRupiah, getCurrentYear, cn } from '@/lib/utils/format'
+import { formatRupiah, parseRupiah, getCurrentYear, getTahunListDynamic, cn } from '@/lib/utils/format'
 
 type Account = Database['public']['Tables']['accounts']['Row']
 type TransactionUpdate = Database['public']['Tables']['transactions']['Update']
@@ -27,7 +27,12 @@ const BULAN_LIST = [
 
 const SWIPE_OPEN_W = 84 // lebar tombol aksi (px)
 
-export default function SearchView() {
+interface Props {
+  targetUserId?: string
+  refreshKey?: number
+}
+
+export default function SearchView({ targetUserId, refreshKey }: Props = {}) {
   const [master, setMaster] = useState<SetupMaster | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -47,14 +52,14 @@ export default function SearchView() {
   const [pendingDelete, setPendingDelete] = useState<SearchTransaction | null>(null)
 
   useEffect(() => {
-    getSetupMaster()
+    getSetupMaster(targetUserId)
       .then(setMaster)
       .catch((err) => {
         console.error('Failed to load setup:', err)
         setError('Gagal memuat data setup: ' + err.message)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [targetUserId])
 
   async function loadSearch() {
     setFetching(true)
@@ -65,6 +70,7 @@ export default function SearchView() {
         year,
         keyword,
         sort,
+        targetUserId,
       })
       if (result.status === 'success') {
         setData(result)
@@ -77,6 +83,15 @@ export default function SearchView() {
       setFetching(false)
     }
   }
+
+  // Auto-reload when refreshKey changes (account switched) (Batch 4)
+  useEffect(() => {
+    if (refreshKey === undefined) return
+    if (keyword) {  // Only reload if there's a search keyword
+      loadSearch()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   function handleSearchClick() {
     loadSearch()
@@ -185,7 +200,7 @@ export default function SearchView() {
               className="w-full bg-white/80 border border-pink-200 rounded-xl py-1.5 px-2 font-semibold text-[10px]"
             >
               <option value={0}>SEMUA</option>
-              {[2024, 2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+              {getTahunListDynamic().map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
@@ -517,6 +532,7 @@ function EditTransactionModal({
       alert('Nominal tidak valid')
       return
     }
+
     if (isPindahDana && (!toAccountId || toAccountId === accountId)) {
       alert('Pindah dana: pilih akun tujuan yang berbeda')
       return

@@ -14,7 +14,12 @@ const BULAN_LIST = [
   'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER',
 ]
 
-export default function MutasiView() {
+interface Props {
+  targetUserId?: string
+  refreshKey?: number
+}
+
+export default function MutasiView({ targetUserId, refreshKey }: Props = {}) {
   const [master, setMaster] = useState<SetupMaster | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -27,7 +32,7 @@ export default function MutasiView() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getSetupMaster()
+    getSetupMaster(targetUserId)
       .then((result) => {
         setMaster(result)
         // Auto-select first account
@@ -40,7 +45,7 @@ export default function MutasiView() {
         setError('Gagal memuat data akun: ' + err.message)
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [targetUserId])
 
   async function loadMutasi() {
     if (!accountId) {
@@ -50,7 +55,7 @@ export default function MutasiView() {
     setFetching(true)
     setError(null)
     try {
-      const result = await getMutasiBank(accountId, month, year)
+      const result = await getMutasiBank(accountId, month, year, targetUserId)
       if (result.status === 'success') {
         setData(result)
       } else {
@@ -62,6 +67,15 @@ export default function MutasiView() {
       setFetching(false)
     }
   }
+
+  // Auto-reload when refreshKey changes (account switched) (Batch 4)
+  useEffect(() => {
+    if (refreshKey === undefined) return
+    if (accountId) {
+      loadMutasi()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   const groupedAccounts = master ? groupAccountsByType(master.accounts) : null
 

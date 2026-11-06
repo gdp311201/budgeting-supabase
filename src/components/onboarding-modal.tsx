@@ -2,15 +2,30 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { startTrial } from '@/lib/api/subscription'
+import { PRICING } from '@/lib/constants/tiers'
 
 interface Props {
   userId: string
   onComplete: (nickname: string) => void
 }
 
+/**
+ * OnboardingModal — first-time user setup
+ *
+ * Flow:
+ * 1. User inputs nickname
+ * 2. Save nickname to profiles.full_name
+ * 3. Auto-start 3-day Premium trial (calls start_trial() RPC)
+ * 4. Call onComplete(nickname) → redirect to PIN setup / welcome page
+ *
+ * The trial is auto-started AFTER profile update succeeds.
+ * If trial start fails, onboarding still completes (user can manually start trial later).
+ */
 export default function OnboardingModal({ userId, onComplete }: Props) {
   const [nickname, setNickname] = useState('')
   const [saving, setSaving] = useState(false)
+  const [startingTrial, setStartingTrial] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,6 +44,7 @@ export default function OnboardingModal({ userId, onComplete }: Props) {
     setError(null)
 
     try {
+      // Step 1: Save nickname to profile
       const supabase = createClient()
       const { error: updateError } = await supabase
         .from('profiles')
@@ -37,11 +53,31 @@ export default function OnboardingModal({ userId, onComplete }: Props) {
 
       if (updateError) throw new Error(updateError.message)
 
+      // Step 2: Start 3-day Premium trial
+      setSaving(false)
+      setStartingTrial(true)
+      try {
+        const trialResult = await startTrial()
+        if (trialResult.status === 'success') {
+          console.log(`✅ Trial started: ${trialResult.trial_length_days} days`)
+          // Optional: show success toast
+        } else {
+          console.warn('Trial start returned error:', trialResult.message)
+          // Don't block onboarding — user can start trial later via admin panel
+        }
+      } catch (trialErr: any) {
+        console.warn('Failed to start trial:', trialErr.message)
+        // Common reasons: user already had a trial, or already premium/admin
+        // Don't block onboarding flow — proceed to PIN setup
+      }
+
+      // Step 3: Complete onboarding (redirect to PIN setup / welcome)
       onComplete(trimmed)
     } catch (err: any) {
       setError(err.message ?? 'Gagal menyimpan')
     } finally {
       setSaving(false)
+      setStartingTrial(false)
     }
   }
 
@@ -53,10 +89,20 @@ export default function OnboardingModal({ userId, onComplete }: Props) {
 
         {/* Title */}
         <h2 className="text-lg font-bold text-pink-950 mb-1">Selamat Datang!</h2>
-        <p className="text-xs text-pink-800/70 mb-4 leading-relaxed">
+        <p className="text-xs text-pink-800/70 mb-3 leading-relaxed">
           Sebelum mulai, kenalan dulu yuk! <br />
           Isi nama panggilan kamu supaya kami bisa menyapamu dengan lebih personal 🌸
         </p>
+
+        {/* Trial bonus banner */}
+        <div className="bg-gradient-to-r from-pink-100 to-rose-100 border border-pink-200 rounded-2xl px-3 py-2 mb-4">
+          <p className="text-[10px] uppercase tracking-wider font-bold text-pink-700">
+            🎁 Bonus Welcome
+          </p>
+          <p className="text-xs font-bold text-pink-950 mt-0.5">
+            {PRICING.trial_days} hari Premium Trial GRATIS!
+          </p>
+        </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -79,10 +125,14 @@ export default function OnboardingModal({ userId, onComplete }: Props) {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || startingTrial}
             className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 disabled:opacity-60 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-sm"
           >
-            {saving ? '⏳ Menyimpan...' : 'Mulai Budgeting →'}
+            {saving
+              ? '⏳ Menyimpan...'
+              : startingTrial
+              ? '🎁 Activating Premium Trial...'
+              : 'Mulai Budgeting →'}
           </button>
         </form>
 

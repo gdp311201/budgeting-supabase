@@ -3,30 +3,31 @@
  *
  * Next.js 16 compatible (params is now a Promise).
  *
- * All routes verify is_admin = true via service role.
+ * All routes verify is_admin = true via authenticated server client.
+ * Then pass callerUserId to admin-master functions (which use service role).
  *
  * GET endpoints:
- *   /api/admin/users              → list all users (with tier, expiry, tx count)
+ *   /api/admin/users              → list all users
  *   /api/admin/stats              → admin dashboard stats
  *   /api/admin/maintenance        → get maintenance mode config
  *   /api/admin/announcement       → get announcement config
  *   /api/admin/whitelist          → list all whitelisted emails
  *
  * POST endpoints:
- *   /api/admin/users/tier         → change user tier { userId, tier, days?, note? }
- *   /api/admin/users/extend       → extend subscription { userId, days }
- *   /api/admin/users/suspend      → suspend user { userId, reason? }
- *   /api/admin/users/unsuspend    → unsuspend user { userId }
- *   /api/admin/users/upgrade-premium    → upgrade to premium 1yr { userId, note? }
- *   /api/admin/users/downgrade-basic    → downgrade to basic 1yr { userId, note? }
- *   /api/admin/users/mark-expired       → mark as expired { userId }
- *   /api/admin/maintenance        → toggle maintenance mode { enabled, message, ... }
- *   /api/admin/announcement       → set announcement { enabled, message, type, dismissible }
- *   /api/admin/whitelist          → add/update whitelist entry { email, full_name?, ... }
- *   /api/admin/whitelist/deactivate  → deactivate { email }
- *   /api/admin/whitelist/reactivate   → reactivate { email }
- *   /api/admin/whitelist/delete        → hard delete { email }
- *   /api/admin/whitelist/grant-mascot  → grant mascot access { email, mascotId }
+ *   /api/admin/users/tier         → change user tier
+ *   /api/admin/users/extend       → extend subscription
+ *   /api/admin/users/suspend      → suspend user
+ *   /api/admin/users/unsuspend    → unsuspend user
+ *   /api/admin/users/upgrade-premium    → upgrade to premium 1yr
+ *   /api/admin/users/downgrade-basic    → downgrade to basic 1yr
+ *   /api/admin/users/mark-expired       → mark as expired
+ *   /api/admin/maintenance        → toggle maintenance mode
+ *   /api/admin/announcement       → set announcement
+ *   /api/admin/whitelist          → add/update whitelist entry
+ *   /api/admin/whitelist/deactivate  → deactivate
+ *   /api/admin/whitelist/reactivate   → reactivate
+ *   /api/admin/whitelist/delete        → hard delete
+ *   /api/admin/whitelist/grant-mascot  → grant mascot access
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -56,16 +57,19 @@ import {
 import type { Tier } from '@/lib/constants/tiers'
 
 // ============================================================
-// Verify admin — uses server-side Supabase client
+// Verify admin — returns userId if admin, else error response
 // ============================================================
-async function verifyAdmin() {
+async function verifyAdmin(): Promise<{ error: NextResponse | null; userId: string | null }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }), userId: null }
+    return {
+      error: NextResponse.json({ error: 'Unauthorized — please login' }, { status: 401 }),
+      userId: null,
+    }
   }
 
   // Check 1: ADMIN_EMAILS env var
@@ -75,7 +79,7 @@ async function verifyAdmin() {
     .filter(Boolean)
   const isAdminByEmail = adminEmails.includes((user.email ?? '').toLowerCase())
 
-  // Check 2: profiles.is_admin flag
+  // Check 2: profiles.is_admin flag (more reliable)
   const { data: profile } = await supabase
     .from('profiles')
     .select('is_admin, tier')
@@ -85,7 +89,10 @@ async function verifyAdmin() {
 
   if (!isAdminByEmail && !isAdminByFlag) {
     return {
-      error: NextResponse.json({ error: 'Forbidden — admin access required' }, { status: 403 }),
+      error: NextResponse.json(
+        { error: 'Forbidden — admin access required' },
+        { status: 403 }
+      ),
       userId: null,
     }
   }
@@ -94,14 +101,15 @@ async function verifyAdmin() {
 }
 
 // ============================================================
-// GET handler — Next.js 16: params is Promise
+// GET handler
 // ============================================================
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ action: string }> }
 ) {
-  const { error } = await verifyAdmin()
+  const { error, userId } = await verifyAdmin()
   if (error) return error
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // ✅ Await params (Next.js 16)
   const { action } = await params
@@ -109,11 +117,11 @@ export async function GET(
   try {
     switch (action) {
       case 'users': {
-        const users = await adminMasterListUsers()
+        const users = await adminMasterListUsers(userId)
         return NextResponse.json({ status: 'success', users })
       }
       case 'stats': {
-        const stats = await adminMasterGetStats()
+        const stats = await adminMasterGetStats(userId)
         return NextResponse.json(stats)
       }
       case 'maintenance': {
@@ -137,14 +145,15 @@ export async function GET(
 }
 
 // ============================================================
-// POST handler — Next.js 16: params is Promise
+// POST handler
 // ============================================================
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ action: string }> }
 ) {
-  const { error } = await verifyAdmin()
+  const { error, userId } = await verifyAdmin()
   if (error) return error
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // ✅ Await params (Next.js 16)
   const { action } = await params
@@ -154,13 +163,14 @@ export async function POST(
 
     switch (action) {
       // ============================================================
-      // Tier management
+      // Tier management — pass userId as callerUserId
       // ============================================================
       case 'users/tier': {
         if (!body.userId || !body.tier) {
           return NextResponse.json({ error: 'userId and tier required' }, { status: 400 })
         }
         const result = await adminMasterSetUserTier(
+          userId,  // ← callerUserId
           body.userId,
           body.tier as Tier,
           body.days ?? null,
@@ -173,7 +183,7 @@ export async function POST(
         if (!body.userId || !body.days) {
           return NextResponse.json({ error: 'userId and days required' }, { status: 400 })
         }
-        const result = await adminMasterExtendSubscription(body.userId, body.days)
+        const result = await adminMasterExtendSubscription(userId, body.userId, body.days)
         return NextResponse.json(result)
       }
 
@@ -181,7 +191,7 @@ export async function POST(
         if (!body.userId) {
           return NextResponse.json({ error: 'userId required' }, { status: 400 })
         }
-        const result = await adminMasterSuspendUser(body.userId, body.reason ?? 'No reason given')
+        const result = await adminMasterSuspendUser(userId, body.userId, body.reason ?? 'No reason given')
         return NextResponse.json(result)
       }
 
@@ -189,7 +199,7 @@ export async function POST(
         if (!body.userId) {
           return NextResponse.json({ error: 'userId required' }, { status: 400 })
         }
-        const result = await adminMasterUnsuspendUser(body.userId)
+        const result = await adminMasterUnsuspendUser(userId, body.userId)
         return NextResponse.json(result)
       }
 
@@ -197,7 +207,7 @@ export async function POST(
         if (!body.userId) {
           return NextResponse.json({ error: 'userId required' }, { status: 400 })
         }
-        const result = await adminMasterUpgradeToPremium(body.userId, body.note)
+        const result = await adminMasterUpgradeToPremium(userId, body.userId, body.note)
         return NextResponse.json(result)
       }
 
@@ -205,7 +215,7 @@ export async function POST(
         if (!body.userId) {
           return NextResponse.json({ error: 'userId required' }, { status: 400 })
         }
-        const result = await adminMasterDowngradeToBasic(body.userId, body.note)
+        const result = await adminMasterDowngradeToBasic(userId, body.userId, body.note)
         return NextResponse.json(result)
       }
 
@@ -213,12 +223,12 @@ export async function POST(
         if (!body.userId) {
           return NextResponse.json({ error: 'userId required' }, { status: 400 })
         }
-        const result = await adminMasterMarkExpired(body.userId)
+        const result = await adminMasterMarkExpired(userId, body.userId)
         return NextResponse.json(result)
       }
 
       // ============================================================
-      // Maintenance mode & announcement
+      // Maintenance mode & announcement — no callerUserId needed
       // ============================================================
       case 'maintenance': {
         const result = await adminMasterSetMaintenanceMode({
@@ -244,7 +254,6 @@ export async function POST(
       // Whitelist management
       // ============================================================
       case 'whitelist': {
-        // Add/update whitelist entry
         if (!body.email) {
           return NextResponse.json({ error: 'email required' }, { status: 400 })
         }

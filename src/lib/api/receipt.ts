@@ -1,6 +1,7 @@
 /**
- * API: RECEIPT (E-Receipt)
- * Wraps the get_ereceipt() RPC function
+ * API: RECEIPT (E-Receipt) — with optional targetUserId for shared access
+ *
+ * @path src/lib/api/receipt.ts
  */
 import { createClient } from '@/lib/supabase/client'
 
@@ -23,12 +24,26 @@ export interface ReceiptData {
   message?: string
 }
 
-export async function getEReceipt(month: number, year: number): Promise<ReceiptData> {
+/**
+ * Fetch e-receipt data.
+ * @param month - 1-12
+ * @param year - e.g., 2026
+ * @param targetUserId - Optional. If provided, fetch for this user (shared access).
+ */
+export async function getEReceipt(
+  month: number,
+  year: number,
+  targetUserId?: string
+): Promise<ReceiptData> {
   const supabase = createClient()
-  const { data, error } = await supabase.rpc('get_ereceipt', {
+  const params: Record<string, any> = {
     p_month: month,
     p_year: year,
-  })
+  }
+  if (targetUserId) {
+    params.p_target_user_id = targetUserId
+  }
+  const { data, error } = await supabase.rpc('get_ereceipt', params)
   if (error) throw new Error(error.message)
   return data as ReceiptData
 }

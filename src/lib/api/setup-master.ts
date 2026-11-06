@@ -1,7 +1,10 @@
 /**
- * API: SETUP MASTER — fetch categories, subcategories, accounts
- * Reusable across Input, Mutasi, Receipt, Search views
- * Only returns accounts WHERE is_selected = true (active)
+ * API: SETUP MASTER — with optional targetUserId for shared access
+ *
+ * Updated to accept targetUserId so account switching also changes
+ * the categories/accounts/subcategories shown in dropdowns.
+ *
+ * @path src/lib/api/setup-master.ts
  */
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
@@ -17,32 +20,48 @@ export interface SetupMaster {
 }
 
 /**
- * Fetch all setup data for current user (categories, subcategories, active accounts)
- * Accounts are filtered by is_selected = true (only show active ones in UI)
+ * Fetch all setup data for a user (categories, subcategories, active accounts).
+ *
+ * @param targetUserId - Optional. If provided, fetch for this user (shared access).
+ *                       If null/undefined, fetch for current logged-in user.
+ *
+ * Note: When targetUserId is provided, the RLS policy must allow the caller
+ * to access that user's data (via shared_access table).
  */
-export async function getSetupMaster(): Promise<SetupMaster> {
+export async function getSetupMaster(targetUserId?: string): Promise<SetupMaster> {
   const supabase = createClient()
 
-  const { data: userData } = await supabase.auth.getUser()
-  if (!userData.user) throw new Error('Not authenticated')
+  // Determine which user_id to fetch data for
+  let userIdToFetch: string
+
+  if (targetUserId) {
+    // Shared access mode — use target user's ID directly
+    // RLS policy will verify caller has shared_access permission
+    userIdToFetch = targetUserId
+  } else {
+    // Own data mode — fetch current logged-in user
+    const { data: userData } = await supabase.auth.getUser()
+    if (!userData.user) throw new Error('Not authenticated')
+    userIdToFetch = userData.user.id
+  }
 
   const [catRes, subRes, accRes] = await Promise.all([
     supabase
       .from('categories')
       .select('*')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userIdToFetch)
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
     supabase
       .from('subcategories')
       .select('*')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userIdToFetch)
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
     supabase
       .from('accounts')
       .select('*')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userIdToFetch)
       .eq('is_active', true)
       .eq('is_selected', true)
       .order('name', { ascending: true }),
@@ -90,7 +109,6 @@ export function groupAccountsByType(accounts: Account[]): {
 
 /**
  * Resolve category_id by name (case-insensitive)
- * Useful for backward compat with hardcoded category names
  */
 export function resolveCategoryIdByName(
   categories: Category[],
@@ -102,11 +120,6 @@ export function resolveCategoryIdByName(
 
 /**
  * Determine transaction type based on category type
- * - income category → 'income'
- * - transfer category → 'transfer_out' (will pair with to_account_id)
- * - investment category → 'investment'
- * - debt category → 'expense'
- * - other/expense → 'expense'
  */
 export function determineTransactionType(
   categoryType: Category['type'] | undefined

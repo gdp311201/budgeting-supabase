@@ -23,6 +23,7 @@ import TrialCountdownBanner from '@/components/trial-countdown-banner'
 import ExpiryCountdownBanner from '@/components/expiry-countdown-banner'
 import MaintenanceModal from '@/components/maintenance-modal'
 import ReadOnlyOverlay from '@/components/read-only-overlay'
+import AnnouncementBanner from '@/components/announcement-banner'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -52,6 +53,11 @@ const MASCOT_EMOJIS: Record<string, string> = {
 }
 
 const PIN_STORAGE_KEY = 'bms_pin_hash'
+
+// WhatsApp number — Sprint 2A update
+const WA_NUMBER = '6281575859792'
+const WA_LINK_DEFAULT = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App`
+const WA_LINK_FEEDBACK = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App`
 
 type AppState = 'pin-setup' | 'pin-lock' | 'welcome' | 'dashboard' | 'cara-pakai' | 'setting'
 
@@ -278,7 +284,7 @@ export default function BudgetingApp({
           🎨
         </button>
         <a
-          href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App"
+          href={WA_LINK_DEFAULT}
           target="_blank"
           rel="noopener noreferrer"
           className="fixed bottom-4 right-4 z-40 w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center transition hover:scale-110"
@@ -387,7 +393,7 @@ export default function BudgetingApp({
 
       {/* Floating WhatsApp button */}
       <a
-        href="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App"
+        href={WA_LINK_DEFAULT}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-24 right-4 z-40 w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 shadow-lg flex items-center justify-center transition hover:scale-110"
@@ -416,6 +422,11 @@ export default function BudgetingApp({
           📊 Viewing shared data — Read/Write mode
         </div>
       )}
+
+      {/* ===== Announcement Banner (Sprint 2A) — admin-set announcement ===== */}
+      <div className="px-4 mb-2">
+        <AnnouncementBanner />
+      </div>
 
       {/* ===== Trial Countdown Banner (Batch 5) ===== */}
       <div className="px-4 mb-2">
@@ -488,7 +499,7 @@ export default function BudgetingApp({
       <FeedbackModal
         open={showFeedback}
         onClose={() => setShowFeedback(false)}
-        waLink="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App"
+        waLink={WA_LINK_FEEDBACK}
       />
 
       {/* ===== Maintenance Modal (Batch 5) — blocks app when admin enables it ===== */}

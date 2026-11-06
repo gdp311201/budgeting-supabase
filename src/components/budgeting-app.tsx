@@ -19,6 +19,10 @@ import CaraPakai from '@/components/cara-pakai'
 import FeedbackModal from '@/components/feedback-modal'
 import AccountSwitcher from '@/components/account-switcher'
 import { getShareableUsers, type ShareableUser } from '@/lib/api/subscription'
+import TrialCountdownBanner from '@/components/trial-countdown-banner'
+import ExpiryCountdownBanner from '@/components/expiry-countdown-banner'
+import MaintenanceModal from '@/components/maintenance-modal'
+import ReadOnlyOverlay from '@/components/read-only-overlay'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -408,6 +412,16 @@ export default function BudgetingApp({
         </div>
       )}
 
+      {/* ===== Trial Countdown Banner (Batch 5) ===== */}
+      <div className="px-4 mb-2">
+        <TrialCountdownBanner />
+      </div>
+
+      {/* ===== Expiry Countdown Banner (Batch 5) ===== */}
+      <div className="px-4 mb-2">
+        <ExpiryCountdownBanner />
+      </div>
+
       {/* Main content */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 pb-32 relative z-10">
         <div className={activeTab === 'dashboard' ? 'block' : 'hidden'}>
@@ -471,6 +485,12 @@ export default function BudgetingApp({
         onClose={() => setShowFeedback(false)}
         waLink="https://wa.me/62XXXXXXXXXXX?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App"
       />
+
+      {/* ===== Maintenance Modal (Batch 5) — blocks app when admin enables it ===== */}
+      <MaintenanceModal />
+
+      {/* ===== Read-Only Overlay (Batch 5) — blocks app when tier=expired/suspended ===== */}
+      <ReadOnlyOverlay />
     </div>
   )
 }

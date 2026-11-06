@@ -23,7 +23,7 @@ function createAdminClient() {
 }
 
 // ============================================================
-// Types (mirror admin.ts)
+// Types
 // ============================================================
 
 export interface AdminUser {
@@ -61,16 +61,19 @@ export interface AdminStats {
 }
 
 // ============================================================
-// Service-role functions (server-only)
+// Service-role functions — accept callerUserId explicitly
+// (because service role has no auth.uid() context)
 // ============================================================
 
 /**
- * List all users (admin only — uses service role to bypass RLS)
- * Uses admin_list_users() RPC function (created in 32_admin_rpc_functions.sql)
+ * List all users (admin only).
+ * @param callerUserId - The admin user's ID (verified by route handler)
  */
-export async function adminMasterListUsers(): Promise<AdminUser[]> {
+export async function adminMasterListUsers(callerUserId: string): Promise<AdminUser[]> {
   const supabase = createAdminClient()
-  const { data, error } = await supabase.rpc('admin_list_users')
+  const { data, error } = await supabase.rpc('admin_list_users', {
+    p_caller_user_id: callerUserId,
+  })
   if (error) throw new Error(error.message)
 
   const result = data as { status: string; users?: AdminUser[]; message?: string }
@@ -81,19 +84,28 @@ export async function adminMasterListUsers(): Promise<AdminUser[]> {
 }
 
 /**
- * Get admin stats (server-side)
+ * Get admin stats.
+ * @param callerUserId - The admin user's ID
  */
-export async function adminMasterGetStats(): Promise<AdminStats> {
+export async function adminMasterGetStats(callerUserId: string): Promise<AdminStats> {
   const supabase = createAdminClient()
-  const { data, error } = await supabase.rpc('admin_get_stats')
+  const { data, error } = await supabase.rpc('admin_get_stats', {
+    p_caller_user_id: callerUserId,
+  })
   if (error) throw new Error(error.message)
   return data as AdminStats
 }
 
 /**
- * Change user tier (server-side, admin-only RPC)
+ * Change user tier.
+ * @param callerUserId - The admin user's ID
+ * @param userId - Target user's ID
+ * @param tier - New tier
+ * @param days - Subscription duration (null = no expiry)
+ * @param note - Admin note
  */
 export async function adminMasterSetUserTier(
+  callerUserId: string,
   userId: string,
   tier: Tier,
   days: number | null = null,
@@ -111,15 +123,17 @@ export async function adminMasterSetUserTier(
     p_tier: tier,
     p_days: days,
     p_note: note,
+    p_caller_user_id: callerUserId,
   })
   if (error) throw new Error(error.message)
   return data
 }
 
 /**
- * Extend subscription by N days (server-side, admin-only RPC)
+ * Extend subscription by N days.
  */
 export async function adminMasterExtendSubscription(
+  callerUserId: string,
   userId: string,
   days: number
 ): Promise<{
@@ -132,54 +146,61 @@ export async function adminMasterExtendSubscription(
   const { data, error } = await supabase.rpc('admin_extend_subscription', {
     p_user_id: userId,
     p_days: days,
+    p_caller_user_id: callerUserId,
   })
   if (error) throw new Error(error.message)
   return data
 }
 
 /**
- * Suspend user (set tier = 'suspended')
+ * Suspend user (set tier = 'suspended').
  */
-export async function adminMasterSuspendUser(userId: string, reason: string) {
-  return adminMasterSetUserTier(userId, 'suspended', null, `Suspended: ${reason}`)
+export async function adminMasterSuspendUser(callerUserId: string, userId: string, reason: string) {
+  return adminMasterSetUserTier(callerUserId, userId, 'suspended', null, `Suspended: ${reason}`)
 }
 
 /**
- * Unsuspend user (set back to 'basic')
+ * Unsuspend user (set back to 'basic').
  */
-export async function adminMasterUnsuspendUser(userId: string) {
-  return adminMasterSetUserTier(userId, 'basic', null, 'Unsuspended by admin')
+export async function adminMasterUnsuspendUser(callerUserId: string, userId: string) {
+  return adminMasterSetUserTier(callerUserId, userId, 'basic', null, 'Unsuspended by admin')
 }
 
 /**
- * Upgrade to Premium for 1 year (365 days)
+ * Upgrade to Premium for 1 year (365 days).
  */
 export async function adminMasterUpgradeToPremium(
+  callerUserId: string,
   userId: string,
   note: string = 'Manual upgrade after payment'
 ) {
-  return adminMasterSetUserTier(userId, 'premium', 365, note)
+  return adminMasterSetUserTier(callerUserId, userId, 'premium', 365, note)
 }
 
 /**
- * Downgrade to Basic for 1 year
+ * Downgrade to Basic for 1 year.
  */
 export async function adminMasterDowngradeToBasic(
+  callerUserId: string,
   userId: string,
   note: string = 'Manual downgrade'
 ) {
-  return adminMasterSetUserTier(userId, 'basic', 365, note)
+  return adminMasterSetUserTier(callerUserId, userId, 'basic', 365, note)
 }
 
 /**
- * Mark user as expired (read-only mode)
+ * Mark user as expired (read-only mode).
  */
-export async function adminMasterMarkExpired(userId: string) {
-  return adminMasterSetUserTier(userId, 'expired', null, 'Marked expired by admin')
+export async function adminMasterMarkExpired(callerUserId: string, userId: string) {
+  return adminMasterSetUserTier(callerUserId, userId, 'expired', null, 'Marked expired by admin')
 }
 
+// ============================================================
+// System settings — no caller_user_id needed (route handler verifies admin)
+// ============================================================
+
 /**
- * Toggle maintenance mode (server-side, updates system_settings)
+ * Toggle maintenance mode.
  */
 export async function adminMasterSetMaintenanceMode(config: {
   enabled: boolean
@@ -189,7 +210,6 @@ export async function adminMasterSetMaintenanceMode(config: {
 }): Promise<{ status: 'success' | 'error'; message?: string }> {
   const supabase = createAdminClient()
 
-  // Fetch current value
   const { data: current } = await supabase
     .from('system_settings')
     .select('value')
@@ -216,7 +236,7 @@ export async function adminMasterSetMaintenanceMode(config: {
 }
 
 /**
- * Set announcement banner (server-side)
+ * Set announcement banner.
  */
 export async function adminMasterSetAnnouncement(config: {
   enabled: boolean
@@ -251,7 +271,7 @@ export async function adminMasterSetAnnouncement(config: {
 }
 
 /**
- * Get current maintenance mode config (server-side)
+ * Get current maintenance mode config.
  */
 export async function adminMasterGetMaintenanceMode(): Promise<{
   enabled: boolean
@@ -272,7 +292,7 @@ export async function adminMasterGetMaintenanceMode(): Promise<{
 }
 
 /**
- * Get current announcement (server-side)
+ * Get current announcement.
  */
 export async function adminMasterGetAnnouncement(): Promise<{
   enabled: boolean

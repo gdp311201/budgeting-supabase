@@ -18,11 +18,12 @@ type Account = Database['public']['Tables']['accounts']['Row']
 
 interface Props {
   user: User
+  targetUserId?: string
 }
 
 const TODAY = () => new Date().toISOString().slice(0, 10)
 
-export default function InputView({ user }: Props) {
+export default function InputView({ user, targetUserId }: Props) {
   const [master, setMaster] = useState<SetupMaster | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -39,16 +40,16 @@ export default function InputView({ user }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // Load setup master on mount
+  // Load setup master on mount + when targetUserId changes
   useEffect(() => {
-    getSetupMaster()
+    getSetupMaster(targetUserId)
       .then(setMaster)
       .catch((err) => {
         console.error('Failed to load setup:', err)
         setMsg({ type: 'error', text: 'Gagal memuat data setup: ' + err.message })
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [targetUserId])
 
   // Get selected category object
   const selectedCategory = master?.categories.find((c) => c.id === categoryId)
@@ -98,7 +99,7 @@ export default function InputView({ user }: Props) {
     try {
       const txType = determineTransactionType(selectedCategory?.type)
 
-      // Insert main transaction
+      // Insert main transaction (pass targetUserId for shared access)
       await createTransaction({
         user_id: user.id,
         transaction_date: date,
@@ -109,7 +110,7 @@ export default function InputView({ user }: Props) {
         amount: cleanNominal,
         type: txType,
         note: note.trim() || subcategoryId ? undefined : null,
-      })
+      }, targetUserId)
 
       setMsg({
         type: 'success',

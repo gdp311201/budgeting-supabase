@@ -194,8 +194,8 @@ export default function BudgetingApp({
   if (appState === 'pin-setup' || appState === 'pin-lock') {
     return (
       <PinLockScreen
-        mode={appState === 'pin-setup' ? 'setup' : 'unlock'}
-        onUnlocked={() => setAppState('welcome')}
+        mode={appState === 'pin-setup' ? 'setup' : 'lock'}
+        onUnlock={() => setAppState('welcome')}
       />
     )
   }

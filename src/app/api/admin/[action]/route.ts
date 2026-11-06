@@ -1,33 +1,10 @@
 /**
- * API Route: /api/admin/[action]/route.ts — Server-side admin endpoints
+ * API Route: /api/admin/[action]/route.ts
  *
- * Next.js 16 compatible (params is now a Promise).
+ * Sprint 2 Fix: Better error handling (return JSON, never HTML)
+ * Next.js 16 compatible (params is Promise)
  *
  * All routes verify is_admin = true via authenticated server client.
- * Then pass callerUserId to admin-master functions (which use service role).
- *
- * GET endpoints:
- *   /api/admin/users              → list all users
- *   /api/admin/stats              → admin dashboard stats
- *   /api/admin/maintenance        → get maintenance mode config
- *   /api/admin/announcement       → get announcement config
- *   /api/admin/whitelist          → list all whitelisted emails
- *
- * POST endpoints:
- *   /api/admin/users/tier         → change user tier
- *   /api/admin/users/extend       → extend subscription
- *   /api/admin/users/suspend      → suspend user
- *   /api/admin/users/unsuspend    → unsuspend user
- *   /api/admin/users/upgrade-premium    → upgrade to premium 1yr
- *   /api/admin/users/downgrade-basic    → downgrade to basic 1yr
- *   /api/admin/users/mark-expired       → mark as expired
- *   /api/admin/maintenance        → toggle maintenance mode
- *   /api/admin/announcement       → set announcement
- *   /api/admin/whitelist          → add/update whitelist entry
- *   /api/admin/whitelist/deactivate  → deactivate
- *   /api/admin/whitelist/reactivate   → reactivate
- *   /api/admin/whitelist/delete        → hard delete
- *   /api/admin/whitelist/grant-mascot  → grant mascot access
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -57,47 +34,76 @@ import {
 import type { Tier } from '@/lib/constants/tiers'
 
 // ============================================================
+// Helper: safe JSON response (never throw to client)
+// ============================================================
+function jsonError(message: string, status: number = 500) {
+  return NextResponse.json({ status: 'error', error: message }, { status })
+}
+
+function jsonSuccess(data: any) {
+  return NextResponse.json({ status: 'success', ...data })
+}
+
+// ============================================================
 // Verify admin — returns userId if admin, else error response
 // ============================================================
 async function verifyAdmin(): Promise<{ error: NextResponse | null; userId: string | null }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  if (!user) {
-    return {
-      error: NextResponse.json({ error: 'Unauthorized — please login' }, { status: 401 }),
-      userId: null,
+    if (!user) {
+      return {
+        error: NextResponse.json(
+          { status: 'error', error: 'Unauthorized — silakan login' },
+          { status: 401 }
+        ),
+        userId: null,
+      }
     }
-  }
 
-  // Check 1: ADMIN_EMAILS env var
-  const adminEmails = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-  const isAdminByEmail = adminEmails.includes((user.email ?? '').toLowerCase())
+    // Check 1: ADMIN_EMAILS env var
+    const adminEmails = (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+    const isAdminByEmail = adminEmails.includes((user.email ?? '').toLowerCase())
 
-  // Check 2: profiles.is_admin flag (more reliable)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin, tier')
-    .eq('id', user.id)
-    .single()
-  const isAdminByFlag = profile?.is_admin === true || profile?.tier === 'admin'
+    // Check 2: profiles.is_admin flag
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('is_admin, tier')
+      .eq('id', user.id)
+      .single()
 
-  if (!isAdminByEmail && !isAdminByFlag) {
+    if (profileErr) {
+      console.error('Admin verify error:', profileErr)
+    }
+    const isAdminByFlag = profile?.is_admin === true || profile?.tier === 'admin'
+
+    if (!isAdminByEmail && !isAdminByFlag) {
+      return {
+        error: NextResponse.json(
+          { status: 'error', error: 'Forbidden — akses admin diperlukan' },
+          { status: 403 }
+        ),
+        userId: null,
+      }
+    }
+
+    return { error: null, userId: user.id }
+  } catch (err: any) {
+    console.error('verifyAdmin exception:', err)
     return {
       error: NextResponse.json(
-        { error: 'Forbidden — admin access required' },
-        { status: 403 }
+        { status: 'error', error: 'Server error: ' + (err?.message ?? 'Unknown') },
+        { status: 500 }
       ),
       userId: null,
     }
   }
-
-  return { error: null, userId: user.id }
 }
 
 // ============================================================
@@ -109,16 +115,21 @@ export async function GET(
 ) {
   const { error, userId } = await verifyAdmin()
   if (error) return error
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId) return jsonError('Unauthorized', 401)
 
-  // ✅ Await params (Next.js 16)
-  const { action } = await params
+  let action: string
+  try {
+    const paramsData = await params
+    action = paramsData.action
+  } catch (err: any) {
+    return jsonError('Invalid route params: ' + err.message, 400)
+  }
 
   try {
     switch (action) {
       case 'users': {
         const users = await adminMasterListUsers(userId)
-        return NextResponse.json({ status: 'success', users })
+        return jsonSuccess({ users })
       }
       case 'stats': {
         const stats = await adminMasterGetStats(userId)
@@ -126,21 +137,22 @@ export async function GET(
       }
       case 'maintenance': {
         const config = await adminMasterGetMaintenanceMode()
-        return NextResponse.json({ status: 'success', config })
+        return jsonSuccess({ config })
       }
       case 'announcement': {
         const config = await adminMasterGetAnnouncement()
-        return NextResponse.json({ status: 'success', config })
+        return jsonSuccess({ config })
       }
       case 'whitelist': {
         const whitelist = await listWhitelist()
-        return NextResponse.json({ status: 'success', whitelist })
+        return jsonSuccess({ whitelist })
       }
       default:
-        return NextResponse.json({ error: `Unknown GET action: ${action}` }, { status: 400 })
+        return jsonError(`Unknown GET action: ${action}`, 400)
     }
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error(`GET /api/admin/${action} error:`, err)
+    return jsonError(err.message ?? 'Internal server error', 500)
   }
 }
 
@@ -153,24 +165,32 @@ export async function POST(
 ) {
   const { error, userId } = await verifyAdmin()
   if (error) return error
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId) return jsonError('Unauthorized', 401)
 
-  // ✅ Await params (Next.js 16)
-  const { action } = await params
+  let action: string
+  let body: any
+  try {
+    const paramsData = await params
+    action = paramsData.action
+  } catch (err: any) {
+    return jsonError('Invalid route params: ' + err.message, 400)
+  }
 
   try {
-    const body = await req.json()
+    body = await req.json()
+  } catch (err: any) {
+    return jsonError('Invalid JSON body: ' + err.message, 400)
+  }
 
+  try {
     switch (action) {
-      // ============================================================
-      // Tier management — pass userId as callerUserId
-      // ============================================================
+      // Tier management
       case 'users/tier': {
         if (!body.userId || !body.tier) {
-          return NextResponse.json({ error: 'userId and tier required' }, { status: 400 })
+          return jsonError('userId and tier diperlukan', 400)
         }
         const result = await adminMasterSetUserTier(
-          userId,  // ← callerUserId
+          userId,
           body.userId,
           body.tier as Tier,
           body.days ?? null,
@@ -178,58 +198,50 @@ export async function POST(
         )
         return NextResponse.json(result)
       }
-
       case 'users/extend': {
         if (!body.userId || !body.days) {
-          return NextResponse.json({ error: 'userId and days required' }, { status: 400 })
+          return jsonError('userId and days diperlukan', 400)
         }
         const result = await adminMasterExtendSubscription(userId, body.userId, body.days)
         return NextResponse.json(result)
       }
-
       case 'users/suspend': {
         if (!body.userId) {
-          return NextResponse.json({ error: 'userId required' }, { status: 400 })
+          return jsonError('userId diperlukan', 400)
         }
         const result = await adminMasterSuspendUser(userId, body.userId, body.reason ?? 'No reason given')
         return NextResponse.json(result)
       }
-
       case 'users/unsuspend': {
         if (!body.userId) {
-          return NextResponse.json({ error: 'userId required' }, { status: 400 })
+          return jsonError('userId diperlukan', 400)
         }
         const result = await adminMasterUnsuspendUser(userId, body.userId)
         return NextResponse.json(result)
       }
-
       case 'users/upgrade-premium': {
         if (!body.userId) {
-          return NextResponse.json({ error: 'userId required' }, { status: 400 })
+          return jsonError('userId diperlukan', 400)
         }
         const result = await adminMasterUpgradeToPremium(userId, body.userId, body.note)
         return NextResponse.json(result)
       }
-
       case 'users/downgrade-basic': {
         if (!body.userId) {
-          return NextResponse.json({ error: 'userId required' }, { status: 400 })
+          return jsonError('userId diperlukan', 400)
         }
         const result = await adminMasterDowngradeToBasic(userId, body.userId, body.note)
         return NextResponse.json(result)
       }
-
       case 'users/mark-expired': {
         if (!body.userId) {
-          return NextResponse.json({ error: 'userId required' }, { status: 400 })
+          return jsonError('userId diperlukan', 400)
         }
         const result = await adminMasterMarkExpired(userId, body.userId)
         return NextResponse.json(result)
       }
 
-      // ============================================================
-      // Maintenance mode & announcement — no callerUserId needed
-      // ============================================================
+      // System settings
       case 'maintenance': {
         const result = await adminMasterSetMaintenanceMode({
           enabled: body.enabled,
@@ -239,7 +251,6 @@ export async function POST(
         })
         return NextResponse.json(result)
       }
-
       case 'announcement': {
         const result = await adminMasterSetAnnouncement({
           enabled: body.enabled,
@@ -250,12 +261,10 @@ export async function POST(
         return NextResponse.json(result)
       }
 
-      // ============================================================
-      // Whitelist management
-      // ============================================================
+      // Whitelist
       case 'whitelist': {
         if (!body.email) {
-          return NextResponse.json({ error: 'email required' }, { status: 400 })
+          return jsonError('email diperlukan', 400)
         }
         const result = await addToWhitelist({
           email: body.email,
@@ -266,45 +275,36 @@ export async function POST(
           notes: body.notes,
           invited_by: body.invited_by ?? 'admin',
         })
-        return NextResponse.json({ status: 'success', entry: result })
+        return jsonSuccess({ entry: result })
       }
-
       case 'whitelist/deactivate': {
-        if (!body.email) {
-          return NextResponse.json({ error: 'email required' }, { status: 400 })
-        }
+        if (!body.email) return jsonError('email diperlukan', 400)
         await removeFromWhitelist(body.email)
-        return NextResponse.json({ status: 'success' })
+        return jsonSuccess({})
       }
-
       case 'whitelist/reactivate': {
-        if (!body.email) {
-          return NextResponse.json({ error: 'email required' }, { status: 400 })
-        }
+        if (!body.email) return jsonError('email diperlukan', 400)
         await reactivateInWhitelist(body.email)
-        return NextResponse.json({ status: 'success' })
+        return jsonSuccess({})
       }
-
       case 'whitelist/delete': {
-        if (!body.email) {
-          return NextResponse.json({ error: 'email required' }, { status: 400 })
-        }
+        if (!body.email) return jsonError('email diperlukan', 400)
         await deleteFromWhitelist(body.email)
-        return NextResponse.json({ status: 'success' })
+        return jsonSuccess({})
       }
-
       case 'whitelist/grant-mascot': {
         if (!body.email || !body.mascotId) {
-          return NextResponse.json({ error: 'email and mascotId required' }, { status: 400 })
+          return jsonError('email and mascotId diperlukan', 400)
         }
         await grantMascotAccess(body.mascotId, body.email)
-        return NextResponse.json({ status: 'success' })
+        return jsonSuccess({})
       }
 
       default:
-        return NextResponse.json({ error: `Unknown POST action: ${action}` }, { status: 400 })
+        return jsonError(`Unknown POST action: ${action}`, 400)
     }
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error(`POST /api/admin/${action} error:`, err)
+    return jsonError(err.message ?? 'Internal server error', 500)
   }
 }

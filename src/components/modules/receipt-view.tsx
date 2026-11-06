@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { getEReceipt, type ReceiptData } from '@/lib/api/receipt'
 import { formatRupiah, getCurrentMonth, getCurrentYear, getTahunListDynamic, cn } from '@/lib/utils/format'
+import { useTier } from '@/lib/hooks/use-tier'
+import { LockedButton } from '@/components/tier-gating'
 
 const BULAN_LIST = [
   'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
@@ -15,7 +17,12 @@ function isMobileDevice(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
 }
 
-export default function ReceiptView() {
+interface Props {
+  targetUserId?: string
+  refreshKey?: number
+}
+
+export default function ReceiptView({ targetUserId, refreshKey }: Props = {}) {
   const [month, setMonth] = useState(getCurrentMonth())
   const [year, setYear] = useState(getCurrentYear())
 
@@ -25,12 +32,13 @@ export default function ReceiptView() {
   const [error, setError] = useState<string | null>(null)
 
   const receiptPaperRef = useRef<HTMLDivElement>(null)
+  const { isReadOnly } = useTier()
 
   async function loadReceipt() {
     setLoading(true)
     setError(null)
     try {
-      const result = await getEReceipt(month, year)
+      const result = await getEReceipt(month, year, targetUserId)
       if (result.status === 'success') {
         setData(result)
       } else {
@@ -42,6 +50,13 @@ export default function ReceiptView() {
       setLoading(false)
     }
   }
+
+  // Auto-reload when refreshKey or targetUserId changes (Batch 4)
+  useEffect(() => {
+    if (refreshKey === undefined) return
+    loadReceipt()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, targetUserId])
 
   async function downloadReceiptAsImage() {
     if (!receiptPaperRef.current) return
@@ -180,13 +195,16 @@ export default function ReceiptView() {
         >
           {loading ? '⏳ Memuat...' : '📊 Tampilkan Data'}
         </button>
-        <button
+        {/* LockedButton wraps the download button with tier gating */}
+        <LockedButton
+          feature="export_reports"
           onClick={downloadReceiptAsImage}
           disabled={!data || downloading}
+          ctaMessage="Export E-Receipt ke PNG adalah fitur Premium. Upgrade untuk mendownload!"
           className="flex-1 bg-white/80 hover:bg-white disabled:opacity-50 text-pink-950 font-semibold py-2 px-3 rounded-xl border border-pink-200/80 shadow-sm text-xs transition"
         >
           {downloading ? '⏳ Proses...' : '📥 Cetak / Simpan'}
-        </button>
+        </LockedButton>
       </div>
 
       {/* Error */}

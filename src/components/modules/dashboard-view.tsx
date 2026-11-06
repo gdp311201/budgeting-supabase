@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { getDashboard, type DashboardData } from '@/lib/api/dashboard'
 import { formatRupiah, getCurrentMonth, getCurrentYear, getTahunListDynamic, cn } from '@/lib/utils/format'
@@ -10,6 +10,8 @@ interface Props {
   mascotEmoji?: string
   mascotIconUrl?: string | null
   nickname?: string | null
+  targetUserId?: string
+  refreshKey?: number
 }
 
 const BULAN_LIST = [
@@ -17,7 +19,7 @@ const BULAN_LIST = [
   'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER',
 ]
 
-export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickname }: Props) {
+export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickname, targetUserId, refreshKey }: Props) {
   const [month, setMonth] = useState(getCurrentMonth())
   const [year, setYear] = useState(getCurrentYear())
   const [data, setData] = useState<DashboardData | null>(null)
@@ -30,7 +32,7 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
     setLoading(true)
     setError(null)
     try {
-      const result = await getDashboard(month, year)
+      const result = await getDashboard(month, year, targetUserId)
       if (result.status === 'success') {
         setData(result)
       } else {
@@ -42,6 +44,12 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
       setLoading(false)
     }
   }
+
+  // Auto-load when refreshKey or targetUserId changes (Batch 4)
+  useEffect(() => {
+    loadDashboard()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, targetUserId])
 
   return (
     <div className="space-y-4">
@@ -101,7 +109,7 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
       {!data && !error && (
         <div className="text-center py-12 bg-white/40 rounded-2xl border border-pink-200/60">
           {mascotIconUrl ? (
-            <img src={mascotIconUrl} alt="Mascot" className="w-[105px] h-[105px] mx-auto mb-2 object-contain drop-shadow-lg" />
+            <img src={mascotIconUrl} alt="Mascot" className="w-12 h-12 mx-auto mb-2 object-contain" />
           ) : (
             <div className="text-4xl mb-2">{mascotEmoji ?? '🐘'}</div>
           )}

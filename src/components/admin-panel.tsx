@@ -124,6 +124,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   // Whitelist state
   const [whitelist, setWhitelist] = useState<AllowedEmail[]>([])
   const [whitelistLoading, setWhitelistLoading] = useState(true)
+  const [whitelistSearch, setWhitelistSearch] = useState('')  // Sprint 8: search filter
   const [whitelistError, setWhitelistError] = useState<string | null>(null)
 
   // Form state for whitelist (removed Nama Lengkap)
@@ -137,6 +138,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   // Users state
   const [users, setUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
+  const [userSearch, setUserSearch] = useState('')  // Sprint 8: search filter
   const [usersError, setUsersError] = useState<string | null>(null)
 
   // Stats state
@@ -349,7 +351,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed')
-      alert('✅ Akses gajah diberikan ke ' + email)
+      alert('✅ Akses gajah diberikan ke ' + email + '. User perlu logout & login lagi untuk melihat perubahan.')
     } catch (err: any) {
       alert('Error: ' + err.message)
     }
@@ -472,7 +474,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Top header */}
-      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800" style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}>
+      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg">
@@ -627,7 +629,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                 <div>
                   <h2 className="text-lg font-bold text-slate-100">Manajemen Pengguna</h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    {users.length} pengguna terdaftar
+                    {filteredUsers.length} dari {users.length} pengguna terdaftar
                   </p>
                 </div>
                 <button
@@ -636,6 +638,13 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                 >
                   ↻ Refresh
                 </button>
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="🔍 Cari email atau nama..."
+                  className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none w-48"
+                />
               </div>
 
               {usersLoading && (
@@ -682,12 +691,12 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                             <span
                               className={cn(
                                 'text-[10px] px-2 py-0.5 rounded-full font-bold border',
-                                info.color,
-                                info.textColor,
-                                info.borderColor
+                                u.tier === 'deleted'
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                  : cn(info.color, info.textColor, info.borderColor)
                               )}
                             >
-                              {info.label}
+                              {u.tier === 'deleted' ? '🗑️ DELETED' : info.label}
                             </span>
                             {u.is_admin && (
                               <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold border border-purple-500/30">
@@ -737,6 +746,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
 
                       {/* Action buttons */}
                       <div className="flex gap-2 flex-wrap">
+                        {u.tier !== 'deleted' && (
                         <button
                           onClick={() => setChangeTierUser(u)}
                           className="text-[11px] bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-lg font-semibold border border-cyan-500/30 transition"
@@ -750,6 +760,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                         >
                           ⭐ Upgrade Premium
                         </button>
+                        )}
                         {u.tier !== 'suspended' && !u.is_admin && (
                           <button
                             onClick={() => setSuspendUser(u)}
@@ -774,9 +785,16 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
               <div>
                 <h2 className="text-lg font-bold text-slate-100">Email Whitelist</h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  {whitelist.length} email terdaftar · Kontrol siapa yang bisa register
+                  {filteredWhitelist.length} dari {whitelist.length} email terdaftar · Kontrol siapa yang bisa register
                 </p>
               </div>
+              <input
+                type="text"
+                value={whitelistSearch}
+                onChange={(e) => setWhitelistSearch(e.target.value)}
+                placeholder="🔍 Cari email atau catatan..."
+                className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none w-full"
+              />
 
               {whitelistLoading && (
                 <p className="text-sm text-slate-400 text-center py-8">Loading whitelist...</p>
@@ -868,7 +886,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
 
               {/* Existing whitelist entries */}
               <div className="grid gap-2">
-                {whitelist.map((entry) => (
+                {filteredWhitelist.map((entry) => (
                   <div
                     key={entry.email}
                     className={cn(

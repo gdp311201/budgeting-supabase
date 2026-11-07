@@ -505,10 +505,10 @@ body::after {
 
 
 /* ============================================================
-   Rotating Light Border — Premium Modal Effect (Sprint 5C)
-   Simpler approach: wrapper div with padding + conic gradient bg.
-   No mask trick needed — more browser compatible.
-   Fallback: static gradient if @property not supported.
+   Rotating Light Border — Premium Modal Effect (Sprint 5D)
+   Wrapper div with conic-gradient background + inner opaque card.
+   Conic gradient ONLY visible in 2px padding gap (border).
+   Inner card has solid bg so gradient doesn't bleed through.
    ============================================================ */
 @property --modal-angle {
   syntax: '<angle>';
@@ -536,6 +536,13 @@ body::after {
     transparent 360deg
   );
   animation: rotateModalAngle 6s linear infinite;
+}
+
+/* Inner card MUST be opaque enough to block gradient bleed */
+.premium-modal-inner {
+  border-radius: calc(1.5rem - 2px);
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes rotateModalAngle {

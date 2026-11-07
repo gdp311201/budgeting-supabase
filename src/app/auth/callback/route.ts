@@ -39,7 +39,6 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user || !user.email) {
-    // No user or email — sign out and redirect
     await supabase.auth.signOut()
     return NextResponse.redirect(requestUrl.origin + '/login?error=no_user')
   }

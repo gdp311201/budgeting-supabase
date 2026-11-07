@@ -110,9 +110,9 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
       {!data && !error && (
         <div className="text-center py-12 bg-white/40 rounded-2xl border border-pink-200/60">
           {mascotIconUrl ? (
-            <img src={mascotIconUrl} alt="Mascot" className="w-[135px] h-[135px] mx-auto mb-2 object-contain" />
+            <img src={mascotIconUrl} alt="Mascot" className="w-[135px] h-[135px] mx-auto mb-2 object-contain mascot-float-glow" />
           ) : (
-            <div className="text-[135px] leading-none mb-2">{mascotEmoji ?? '🐘'}</div>
+            <div className="text-[135px] leading-none mb-2 mascot-float-glow">{mascotEmoji ?? '🐘'}</div>
           )}
           <p className="text-xs font-semibold text-pink-900/70">Belum ada data dimuat</p>
           <p className="text-[10px] text-pink-900/50 mt-1">Pilih periode di atas, lalu klik <b>Tampilkan Dashboard</b></p>

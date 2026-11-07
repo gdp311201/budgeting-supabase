@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { getDashboard, type DashboardData } from '@/lib/api/dashboard'
 import { formatRupiah, getCurrentMonth, getCurrentYear, getTahunListDynamic, cn } from '@/lib/utils/format'
+import { getMonthlyInsights, type MonthlyInsightsData } from '@/lib/api/insights'
+import { getBudgetProgress, type BudgetProgressItem } from '@/lib/api/insights'
 
 interface Props {
   user: User
@@ -25,6 +27,8 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [insights, setInsights] = useState<MonthlyInsightsData | null>(null)
+  const [budgetProgress, setBudgetProgress] = useState<BudgetProgressItem[]>([])
 
   const tahunList = getTahunListDynamic()
 
@@ -35,6 +39,15 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
       const result = await getDashboard(month, year, targetUserId)
       if (result.status === 'success') {
         setData(result)
+        // Sprint 11: Load insights + budget progress
+        try {
+          const [insightsResult, budgetResult] = await Promise.all([
+            getMonthlyInsights(month, year, targetUserId),
+            getBudgetProgress(month, year, targetUserId),
+          ])
+          if (insightsResult.status === "success") setInsights(insightsResult)
+          if (budgetResult.status === "success") setBudgetProgress(budgetResult.items ?? [])
+        } catch (e) { console.warn("Failed to load insights:", e) }
       } else {
         setError(result.message ?? 'Failed to load dashboard')
       }
@@ -49,6 +62,8 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
   useEffect(() => {
     setData(null)
     setError(null)
+    setInsights(null)
+    setBudgetProgress([])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetUserId, refreshKey])
 
@@ -203,6 +218,98 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
                 </div>
               )
             })}
+          </div>
+        </div>
+      )}
+
+
+      {/* ===== Monthly Insights (Sprint 11) ===== */}
+      {insights && insights.status === 'success' && (
+        <div>
+          <h3 className="text-xs font-bold text-pink-950/80 uppercase tracking-wider mb-2">
+            Insight Bulan Ini
+          </h3>
+          <div className="bg-white/60 backdrop-blur-md rounded-2xl p-3 border border-pink-200/60 shadow-sm space-y-3">
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-emerald-500/10 border border-emerald-300/60 rounded-xl p-2">
+                <p className="text-[9px] font-bold text-emerald-800 uppercase">Pemasukan</p>
+                <p className="text-xs font-bold text-emerald-950">{formatRupiah(insights.current.income)}</p>
+                {insights.changes.income_pct !== 0 && (
+                  <p className={cn('text-[9px] font-bold', insights.changes.income_pct > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                    {insights.changes.income_pct > 0 ? 'UP' : 'DOWN'} {Math.abs(insights.changes.income_pct)}%
+                  </p>
+                )}
+              </div>
+              <div className="bg-rose-500/10 border border-rose-300/60 rounded-xl p-2">
+                <p className="text-[9px] font-bold text-rose-800 uppercase">Pengeluaran</p>
+                <p className="text-xs font-bold text-rose-950">{formatRupiah(insights.current.expense)}</p>
+                {insights.changes.expense_pct !== 0 && (
+                  <p className={cn('text-[9px] font-bold', insights.changes.expense_pct < 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                    {insights.changes.expense_pct < 0 ? 'HEMAT' : 'NAIK'} {Math.abs(insights.changes.expense_pct)}%
+                  </p>
+                )}
+              </div>
+              <div className="bg-blue-500/10 border border-blue-300/60 rounded-xl p-2">
+                <p className="text-[9px] font-bold text-blue-800 uppercase">Investasi</p>
+                <p className="text-xs font-bold text-blue-950">{formatRupiah(insights.current.investment)}</p>
+              </div>
+              <div className={cn('border rounded-xl p-2', insights.current.savings >= 0 ? 'bg-purple-500/10 border-purple-300/60' : 'bg-red-500/10 border-red-300/60')}>
+                <p className="text-[9px] font-bold uppercase text-purple-800">Sisa</p>
+                <p className={cn('text-xs font-bold', insights.current.savings >= 0 ? 'text-purple-950' : 'text-red-950')}>
+                  {formatRupiah(insights.current.savings)}
+                </p>
+                {insights.changes.savings_pct !== 0 && insights.current.savings > 0 && (
+                  <p className={cn('text-[9px] font-bold', insights.changes.savings_pct > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                    {insights.changes.savings_pct > 0 ? 'UP' : 'DOWN'} {Math.abs(insights.changes.savings_pct)}%
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* AI Insights */}
+            {insights.insights && insights.insights.length > 0 && (
+              <div className="bg-pink-50/80 border border-pink-200/60 rounded-xl p-2 space-y-1">
+                {insights.insights.map((insight, idx) => (
+                  <p key={idx} className="text-[10px] text-pink-900/80 font-medium leading-relaxed">
+                    {insight}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Budget Tracker Progress (Sprint 11) ===== */}
+      {budgetProgress.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold text-pink-950/80 uppercase tracking-wider mb-2">
+            Budget Progress
+          </h3>
+          <div className="space-y-2">
+            {budgetProgress.slice(0, 8).map((item, idx) => (
+              <div key={idx} className="bg-white/60 backdrop-blur-md rounded-xl p-2 border border-pink-100/80">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-pink-900/80 truncate flex-1">
+                    {item.category_icon ? item.category_icon + ' ' : ''}{item.subcategory_name}
+                  </span>
+                  <span className={cn('text-[9px] font-bold', item.status === 'exceeded' ? 'text-red-600' : item.status === 'critical' ? 'text-orange-600' : item.status === 'warning' ? 'text-amber-600' : 'text-emerald-600')}>
+                    {item.percentage}%
+                  </span>
+                </div>
+                {/* Progress bar */}
+                <div className="w-full bg-pink-100/60 rounded-full h-2 overflow-hidden">
+                  <div className={cn('h-2 rounded-full transition-all', item.status === 'exceeded' ? 'bg-red-500' : item.status === 'critical' ? 'bg-orange-500' : item.status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500')} style={{ width: Math.min(100, item.percentage) + '%' }} />
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[8px] text-pink-700/60">{formatRupiah(item.actual_spending)} / {formatRupiah(item.budget_amount)}</span>
+                  <span className={cn('text-[8px] font-bold', item.remaining < 0 ? 'text-red-600' : 'text-emerald-600')}>
+                    {item.remaining < 0 ? 'OVER!' : 'Sisa ' + formatRupiah(item.remaining)}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

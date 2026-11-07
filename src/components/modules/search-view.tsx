@@ -254,7 +254,7 @@ export default function SearchView({ targetUserId, refreshKey }: Props = {}) {
           <div className="max-h-[450px] overflow-y-auto pr-1 space-y-2">
             {data.transactions.length === 0 ? (
               <p className="text-center text-xs text-pink-800/60 py-6 font-medium">
-                Tidak ada transaksi ditemukan.
+                Tidak ada transaksi yang ditemukan.
               </p>
             ) : (
               data.transactions.map((tx) => (
@@ -555,12 +555,12 @@ function EditTransactionModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-pink-950/40 backdrop-blur-[5px]"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/40 backdrop-blur-[5px]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/95 w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto animate-pop">
+      <div className="bg-white/95 w-full max-w-md rounded-3xl shadow-2xl max-h-[92vh] overflow-y-auto animate-pop">
         <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 sticky top-0 z-10">
-          <h3 className="text-base font-bold text-white tracking-wide drop-shadow">✏️ Edit Transaksi</h3>
+          <h3 className="text-base font-bold text-white tracking-wide drop-shadow">✏️ Edit Transaksi Anda</h3>
           <button
             onClick={onClose}
             className="w-9 h-9 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center"
@@ -622,24 +622,22 @@ function EditTransactionModal({
             </div>
           )}
 
-          {/* Nominal */}
+          {/* Nominal — Sprint 3B: Rp prefix + auto separator */}
           <div>
             <label className="block text-[10px] font-bold uppercase text-pink-900/70 mb-1">
-              Nominal (Rp)
+              Nominal
             </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={nominal}
-              onChange={(e) => setNominal(e.target.value.replace(/[^0-9]/g, ''))}
-              required
-              className="w-full bg-white/80 border border-pink-200 rounded-xl px-3 py-2 text-sm font-bold text-right"
-            />
-            {nominal && (
-              <p className="text-[10px] text-pink-700/60 mt-0.5">
-                = {formatRupiah(parseRupiah(nominal))}
-              </p>
-            )}
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-pink-700/60">Rp</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={nominal ? Number(nominal).toLocaleString('id-ID') : ''}
+                onChange={(e) => setNominal(e.target.value.replace(/[^0-9]/g, ''))}
+                required
+                className="w-full bg-white/80 border border-pink-200 rounded-xl pl-10 pr-3.5 py-2 text-sm font-bold text-right"
+              />
+            </div>
           </div>
 
           {/* Akun Asal */}
@@ -796,7 +794,7 @@ function DeleteConfirmModal({
         <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-rose-100 border border-rose-200">
           🗑️
         </div>
-        <h3 className="text-sm font-bold text-rose-950 mb-2">Hapus Transaksi Ini?</h3>
+        <h3 className="text-sm font-bold text-rose-950 mb-2">Hapus Transaksi Anda?</h3>
         <div className="text-[11px] text-pink-900/80 font-semibold bg-pink-50 border border-pink-100 rounded-xl px-3 py-2 mb-2 leading-relaxed text-left">
           <div className="font-bold">{transaction.kategori}</div>
           <div>{transaction.subkategori || '—'}</div>
@@ -806,7 +804,7 @@ function DeleteConfirmModal({
           </div>
         </div>
         <p className="text-[10px] text-rose-700/80 font-medium mb-4">
-          Tindakan ini permanen & tidak dapat dibatalkan.
+          Tindakan ini permanen & tidak dapat Anda batalkan.
         </p>
         <div className="flex gap-2">
           <button

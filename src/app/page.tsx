@@ -23,22 +23,15 @@ export default async function Home({
     return <SetupRequired />
   }
 
-  // ============================================================
-  // ADMIN ROUTE — redirect old URL (?admin=1) to new /admin route
-  // (Sprint 2A: Admin panel sekarang di route terpisah /admin)
-  // ============================================================
-  if (isAdminRoute) {
-    redirect('/admin')
-  }
-
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // ============================================================
-  // REGULAR ROUTE — render BudgetingApp
-  // ============================================================
+  if (isAdminRoute) {
+    redirect('/admin')
+  }
+
   if (!user) {
     redirect('/login')
   }
@@ -48,6 +41,18 @@ export default async function Home({
     .select('*')
     .eq('id', user.id)
     .single()
+
+  // Sprint 8: CRITICAL — Check if user is suspended or deleted
+  // This catches users who have a cached session but were blocked by admin
+  if (profile?.tier === 'suspended') {
+    await supabase.auth.signOut()
+    redirect('/login?error=suspended')
+  }
+
+  if (profile?.tier === 'deleted') {
+    await supabase.auth.signOut()
+    redirect('/login?error=deleted')
+  }
 
   return <BudgetingApp user={user} initialProfile={profile} />
 }

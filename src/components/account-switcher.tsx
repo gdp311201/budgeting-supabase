@@ -17,11 +17,16 @@ interface Props {
 }
 
 /**
- * Account Switcher — dropdown button in header.
- * Allows premium+ users to switch between "My Budget" and shared partner's budget.
+ * AccountSwitcher — circular icon button in header pill
+ *
+ * Sprint 3A Redesign:
+ * - Changed from pill-shaped button with text → small circular icon button (24x24)
+ * - Positioned INSIDE header pill, next to "My Budgeting" text (1 baris)
+ * - Dropdown opens below with list of accounts
+ * - Hidden entirely if no shareable users (basic tier users see nothing)
  *
  * Behavior:
- * - Click button → dropdown opens
+ * - Click button → dropdown opens below
  * - Select "My Budget" → onSwitch(null)
  * - Select partner → onSwitch(partnerUserId)
  * - Click outside → dropdown closes
@@ -52,43 +57,31 @@ export default function AccountSwitcher({
     return null
   }
 
-  // Determine current label
+  // Determine current icon
   const isMyBudget = activeUserId === null
-  const currentUser = isMyBudget
-    ? { email: myEmail, full_name: myNickname, tier: 'me' as const }
-    : shareableUsers.find((u) => u.user_id === activeUserId)
-
-  const currentLabel = isMyBudget
-    ? (myNickname || 'My Budget')
-    : (currentUser?.full_name || currentUser?.email || 'Shared')
+  const currentIcon = isMyBudget ? '👤' : '📊'
 
   return (
     <div ref={ref} className="relative">
+      {/* Circular icon button — fits inside header pill */}
       <button
         onClick={() => setOpen((prev) => !prev)}
         className={cn(
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition',
-          'bg-white/70 backdrop-blur-md border border-pink-200/60 shadow-sm',
-          'hover:bg-white/90 hover:shadow-md',
-          open && 'bg-white/95 shadow-md'
+          'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition shrink-0',
+          'bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-sm',
+          'hover:scale-110 active:scale-95',
+          open && 'ring-2 ring-pink-200'
         )}
         aria-label="Switch account"
         aria-expanded={open}
+        title={isMyBudget ? 'My Budget' : 'Viewing shared data'}
       >
-        <span className="text-sm">
-          {isMyBudget ? '👤' : '📊'}
-        </span>
-        <span className="max-w-[80px] truncate text-pink-900">
-          {currentLabel}
-        </span>
-        <span className={cn('text-pink-400 transition-transform', open && 'rotate-180')}>
-          ▼
-        </span>
+        {currentIcon}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown — opens BELOW the button */}
       {open && (
-        <div className="absolute top-full right-0 mt-1 w-56 bg-white/95 backdrop-blur-xl border border-pink-200/60 rounded-2xl shadow-2xl z-50 overflow-hidden">
+        <div className="absolute top-full right-0 mt-2 w-56 bg-white/95 backdrop-blur-xl border border-pink-200/60 rounded-2xl shadow-2xl z-50 overflow-hidden">
           <div className="px-3 py-2 bg-pink-50/80 border-b border-pink-100">
             <p className="text-[10px] uppercase tracking-wider font-bold text-pink-700">
               Switch Account
@@ -117,9 +110,7 @@ export default function AccountSwitcher({
           </button>
 
           {/* Divider */}
-          {shareableUsers.length > 0 && (
-            <div className="border-t border-pink-100" />
-          )}
+          <div className="border-t border-pink-100" />
 
           {/* Shareable users list */}
           {shareableUsers.map((user) => {

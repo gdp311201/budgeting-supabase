@@ -2,7 +2,7 @@
 
 interface Props {
   nickname: string | null
-  onNavigate: (view: 'dashboard' | 'cara-pakai' | 'fitur-premium') => void
+  onNavigate: (view: 'fitur-premium' | 'dashboard' | 'cara-pakai') => void
 }
 
 export default function WelcomePage({ nickname, onNavigate }: Props) {
@@ -15,7 +15,14 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
       <div className="relative z-10 w-full max-w-sm text-center space-y-6">
         {/* Greeting */}
         <div>
-          <div className="w-16 h-16 mx-auto mb-2 animate-pulse"><img src="https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png" alt="GDP" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))" }} /></div>
+          <div className="w-16 h-16 mx-auto mb-2 animate-pulse">
+            <img
+              src="https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png"
+              alt="GDP"
+              className="w-full h-full object-contain"
+              style={{ filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))' }}
+            />
+          </div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-pink-700/70">
             Selamat Datang
           </p>
@@ -27,51 +34,58 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
           </p>
         </div>
 
-        {/* 3 Menu Buttons */}
+        {/* 3 Menu Buttons — Premium Glassmorphism Style */}
         <div className="space-y-3">
-          {/* Dashboard */}
+          {/* 💎 Fitur Premium — FIRST (CTA priority) */}
           <button
-            onClick={() => onNavigate('dashboard')}
-            className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-4 px-6 rounded-2xl shadow-lg transition hover:scale-[1.02] flex items-center gap-3"
+            onClick={() => onNavigate('fitur-premium')}
+            className="w-full relative overflow-hidden bg-white/50 backdrop-blur-xl hover:bg-white/70 text-pink-950 font-bold py-4 px-6 rounded-2xl shadow-xl border border-white/60 transition hover:scale-[1.02] flex items-center gap-3 group"
+            style={{
+              boxShadow: '0 8px 32px rgba(236, 72, 153, 0.15), inset 0 1px 1px rgba(255,255,255,0.6)',
+            }}
           >
-            <span className="text-2xl">📊</span>
-            <div className="text-left flex-1">
-              <p className="text-sm font-bold">Dashboard</p>
-              <p className="text-[10px] text-white/80">Lihat ringkasan keuangan Anda</p>
+            {/* Shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <span className="text-2xl relative z-10">💎</span>
+            <div className="text-left flex-1 relative z-10">
+              <p className="text-sm font-bold">Fitur Premium</p>
+              <p className="text-[10px] text-pink-700/60">Unlock semua fitur eksklusif</p>
             </div>
-            <span className="text-white/60">→</span>
+            <span className="text-[8px] bg-pink-500 text-white px-2 py-0.5 rounded-full font-bold relative z-10">PRO</span>
           </button>
 
-          {/* Cara Pakai */}
+          {/* 📊 Dashboard — SECOND */}
+          <button
+            onClick={() => onNavigate('dashboard')}
+            className="w-full relative overflow-hidden bg-white/50 backdrop-blur-xl hover:bg-white/70 text-pink-950 font-bold py-4 px-6 rounded-2xl shadow-xl border border-white/60 transition hover:scale-[1.02] flex items-center gap-3 group"
+            style={{
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255,255,255,0.6)',
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <span className="text-2xl relative z-10">📊</span>
+            <div className="text-left flex-1 relative z-10">
+              <p className="text-sm font-bold">Dashboard</p>
+              <p className="text-[10px] text-pink-700/60">Lihat ringkasan keuangan Anda</p>
+            </div>
+            <span className="text-pink-400 relative z-10">→</span>
+          </button>
+
+          {/* 📖 Cara Pakai — THIRD */}
           <button
             onClick={() => onNavigate('cara-pakai')}
-            className="w-full bg-white/70 backdrop-blur-md hover:bg-white/90 text-pink-950 font-bold py-4 px-6 rounded-2xl shadow-lg border border-pink-200/60 transition hover:scale-[1.02] flex items-center gap-3"
+            className="w-full relative overflow-hidden bg-white/50 backdrop-blur-xl hover:bg-white/70 text-pink-950 font-bold py-4 px-6 rounded-2xl shadow-xl border border-white/60 transition hover:scale-[1.02] flex items-center gap-3 group"
+            style={{
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255,255,255,0.6)',
+            }}
           >
-            <span className="text-2xl">📖</span>
-            <div className="text-left flex-1">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            <span className="text-2xl relative z-10">📖</span>
+            <div className="text-left flex-1 relative z-10">
               <p className="text-sm font-bold">Cara Pakai</p>
               <p className="text-[10px] text-pink-700/60">Panduan lengkap menggunakan app</p>
             </div>
-            <span className="text-pink-400">→</span>
-          </button>
-
-          {/* Fitur Premium (NEW) */}
-          <button
-            onClick={() => onNavigate('fitur-premium')}
-            className="w-full bg-gradient-to-r from-amber-300 to-yellow-400 hover:from-amber-400 hover:to-yellow-500 text-amber-950 font-bold py-4 px-6 rounded-2xl shadow-lg border border-amber-200/60 transition hover:scale-[1.02] flex items-center gap-3 relative overflow-hidden"
-          >
-            <span className="text-2xl">💎</span>
-            <div className="text-left flex-1">
-              <p className="text-sm font-bold">Fitur Premium</p>
-              <p className="text-[10px] text-amber-900/70">
-                Unlock semua fitur + Couple Budgeting
-              </p>
-            </div>
-            <span className="text-amber-700">→</span>
-            {/* Decorative shimmer */}
-            <span className="absolute top-0 right-0 text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-bl-lg font-bold">
-              PRO
-            </span>
+            <span className="text-pink-400 relative z-10">→</span>
           </button>
         </div>
 

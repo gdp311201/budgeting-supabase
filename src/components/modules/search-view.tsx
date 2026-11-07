@@ -84,14 +84,13 @@ export default function SearchView({ targetUserId, refreshKey }: Props = {}) {
     }
   }
 
-  // Auto-reload when refreshKey changes (account switched) (Batch 4)
+  // Sprint 4B: Clear data on account switch (user must click button to reload)
   useEffect(() => {
-    if (refreshKey === undefined) return
-    if (keyword) {  // Only reload if there's a search keyword
-      loadSearch()
-    }
+    if (refreshKey === undefined && targetUserId === undefined) return
+    setData(null)
+    setError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey])
+  }, [refreshKey, targetUserId])
 
   function handleSearchClick() {
     loadSearch()

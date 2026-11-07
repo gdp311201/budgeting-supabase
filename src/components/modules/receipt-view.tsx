@@ -51,10 +51,11 @@ export default function ReceiptView({ targetUserId, refreshKey }: Props = {}) {
     }
   }
 
-  // Auto-reload when refreshKey or targetUserId changes (Batch 4)
+  // Sprint 4B: Clear data on account switch (user must click button to reload)
   useEffect(() => {
-    if (refreshKey === undefined) return
-    loadReceipt()
+    if (refreshKey === undefined && targetUserId === undefined) return
+    setData(null)
+    setError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey, targetUserId])
 

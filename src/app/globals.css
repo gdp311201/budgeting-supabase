@@ -305,7 +305,7 @@
     background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
-    filter: blur(calc(var(--blur-wallpaper) + 1px)) brightness(calc(var(--dim-wallpaper) * 0.82));
+    filter: blur(calc(var(--blur-wallpaper) + 2px)) brightness(calc(var(--dim-wallpaper) * 0.65));
     animation: var(--wallpaper-motion, none) var(--wallpaper-motion-speed, 45s) ease-in-out infinite;
     will-change: transform;
   }
@@ -425,7 +425,60 @@
   animation: shake 0.35s ease-in-out;
 }
 
+/* ============================================================
+   Light Sweep Animation — Premium card border effect (Sprint 4C)
+   A subtle light gradient that sweeps across the outer border
+   of the premium pricing card periodically.
+   ============================================================ */
+.premium-sweep-wrapper {
+  position: relative;
+}
+
+.premium-sweep {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.premium-sweep::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.25) 50%,
+    rgba(255, 255, 255, 0.08) 60%,
+    transparent 70%
+  );
+  animation: premiumLightSweep 4s ease-in-out infinite;
+  transform: translateX(-100%);
+}
+
+@keyframes premiumLightSweep {
+  0% {
+    transform: translateX(-100%) rotate(0deg);
+  }
+  50% {
+    transform: translateX(100%) rotate(0deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(0deg);
+  }
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .wallpaper-bg { animation: none; }
+  .premium-sweep { display: none; }
 }

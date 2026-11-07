@@ -15,7 +15,7 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
       <div className="relative z-10 w-full max-w-sm text-center space-y-6">
         {/* Greeting */}
         <div>
-          <div className="text-5xl mb-2 animate-pulse">🐘</div>
+          <div className="w-16 h-16 mx-auto mb-2 animate-pulse"><img src="https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png" alt="GDP" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))" }} /></div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-pink-700/70">
             Selamat Datang
           </p>
@@ -77,7 +77,7 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
 
         {/* Footer */}
         <p className="text-[10px] text-pink-800/40 mt-8">
-          Growsphere Digital Product · Made with ❤️
+          Growsphere Digital Product · Crafted by Julyo Sechar
         </p>
       </div>
     </div>

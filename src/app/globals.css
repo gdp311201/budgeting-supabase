@@ -306,7 +306,7 @@
     background-size: cover;
     background-repeat: no-repeat;
     filter: blur(calc(var(--blur-wallpaper) + 2px)) brightness(calc(var(--dim-wallpaper) * 0.65));
-    animation: var(--wallpaper-motion, none) var(--wallpaper-motion-speed, 45s) ease-in-out infinite;
+    animation: var(--wallpaper-motion, none) var(--wallpaper-motion-speed, 30s) ease-in-out infinite;
     will-change: transform;
   }
 
@@ -372,8 +372,8 @@
    ============================================================ */
 
 @keyframes wallpaper-kenburns {
-  0%, 100% { transform: scale(1) translate(0%, 0%); }
-  50%      { transform: scale(1.07) translate(1.3%, -1.1%); }
+  0%, 100% { transform: scale(1.05) translate(0%, 0%); }
+  50%      { transform: scale(1.1) translate(1%, -0.8%); }
 }
 
 @keyframes wallpaper-pan {
@@ -423,6 +423,32 @@
 
 .animate-shake {
   animation: shake 0.35s ease-in-out;
+}
+
+
+/* ============================================================
+   Spotlight Moving Effect (Sprint 5) — subtle depth layer
+   Radial gradient moving slowly across background, 6% opacity
+   ============================================================ */
+body::after {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.06) 0%, transparent 40%);
+  z-index: -1;
+  animation: spotlightMove 15s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spotlightMove {
+  0%   { transform: translate(0%, 0%); }
+  25%  { transform: translate(10%, 8%); }
+  50%  { transform: translate(-8%, 12%); }
+  75%  { transform: translate(8%, -8%); }
+  100% { transform: translate(0%, 0%); }
 }
 
 /* ============================================================
@@ -477,8 +503,83 @@
   }
 }
 
+
+/* ============================================================
+   Rotating Light Border — Premium Modal Effect (Sprint 5)
+   Conic gradient (pink + rose) rotating around modal border.
+   Uses @property --angle (CSS Houdini) for smooth rotation.
+   Fallback: static border if @property not supported.
+   ============================================================ */
+@property --modal-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.premium-modal-border {
+  position: relative;
+  isolation: isolate;
+}
+
+.premium-modal-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--modal-angle),
+    transparent 0deg,
+    transparent 15deg,
+    rgba(236, 72, 153, 0.9) 40deg,
+    #ffffff 50deg,
+    rgba(244, 63, 94, 0.9) 60deg,
+    transparent 85deg,
+    transparent 195deg,
+    rgba(236, 72, 153, 0.9) 220deg,
+    #ffffff 230deg,
+    rgba(244, 63, 94, 0.9) 240deg,
+    transparent 265deg,
+    transparent 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotateModalAngle 6s linear infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes rotateModalAngle {
+  to { --modal-angle: 360deg; }
+}
+
+/* ============================================================
+   Floating Mascot Glow — Dashboard empty state (Sprint 5)
+   Mascot icon floats up/down with pulsing glow shadow
+   ============================================================ */
+.mascot-float-glow {
+  animation: floatGlow 4s ease-in-out infinite;
+}
+
+@keyframes floatGlow {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 0 10px rgba(236, 72, 153, 0.3));
+  }
+  50% {
+    transform: translateY(-8px) scale(1.03);
+    filter: drop-shadow(0 0 25px rgba(236, 72, 153, 0.5));
+  }
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .wallpaper-bg { animation: none; }
   .premium-sweep { display: none; }
+  .premium-modal-border::before { animation: none; }
+  .mascot-float-glow { animation: none; }
+  body::after { animation: none; }
 }

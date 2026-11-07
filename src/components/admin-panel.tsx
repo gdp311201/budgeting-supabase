@@ -1440,8 +1440,8 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-bold text-slate-100">
-                          {f.email || 'Anonymous'}
+                        <span className="text-xs font-bold text-cyan-300">
+                          ✉️ {f.email || 'Anonymous'}
                         </span>
                         <span className={cn(
                           'text-[9px] px-2 py-0.5 rounded-full font-bold border',

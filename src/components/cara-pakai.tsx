@@ -8,15 +8,15 @@ const SECTIONS = [
   {
     icon: '🔐',
     title: 'PIN Keamanan',
-    desc: 'Amankan app kamu dengan PIN 6 digit',
+    desc: 'Amankan app Anda dengan PIN 6 digit',
     items: [
-      'Saat pertama login, kamu akan diminta setup PIN 6 digit',
+      'Saat pertama login, Anda akan diminta setup PIN 6 digit',
       'Setiap kali buka app, masukkan PIN untuk unlock',
-      'PIN disimpan di perangkat (localStorage) — aman & terenkripsi',
-      'Kalau salah PIN 3x, otomatis sign out untuk keamanan',
+      'PIN disimpan di perangkat Anda (localStorage) — aman & terenkripsi',
+      'Jika salah PIN 3x, otomatis sign out untuk keamanan',
       'Lupa PIN? Klik "Lupa PIN? Login ulang" di lock screen',
       'Login ulang pakai Google → setelah berhasil, set PIN baru',
-      'Data kamu tetap aman saat reset PIN (tidak hilang)',
+      'Data Anda tetap aman saat reset PIN (tidak hilang)',
       'PIN berlaku per perangkat — HP dan laptop bisa beda PIN',
     ],
   },
@@ -25,17 +25,17 @@ const SECTIONS = [
     title: 'Welcome Page',
     desc: 'Halaman utama setelah PIN unlock',
     items: [
-      'Setelah unlock PIN, kamu masuk ke Welcome Page',
-      '3 menu tersedia: Dashboard, Cara Pakai, Setting',
-      'Dashboard → langsung ke ringkasan keuangan',
+      'Setelah unlock PIN, Anda masuk ke Welcome Page',
+      '3 menu tersedia: Dashboard, Cara Pakai, Fitur Premium',
+      'Dashboard → langsung ke ringkasan keuangan Anda',
       'Cara Pakai → panduan lengkap (halaman ini)',
-      'Setting → atur akun bank, kategori & budget',
+      'Fitur Premium → lihat benefit & upgrade ke Premium tier',
     ],
   },
   {
     icon: '📊',
     title: 'Dashboard',
-    desc: 'Lihat ringkasan keuangan bulanan kamu',
+    desc: 'Lihat ringkasan keuangan bulanan Anda',
     items: [
       'Pilih bulan & tahun di filter atas',
       'Klik "Tampilkan Dashboard" untuk load data',
@@ -79,13 +79,13 @@ const SECTIONS = [
   {
     icon: '🧾',
     title: 'E-Receipt',
-    desc: 'Ringkasan kuitansi bulanan + download sebagai gambar',
+    desc: 'Ringkasan kuitansi bulanan + download sebagai gambar (Premium)',
     items: [
       'Pilih bulan & tahun',
       'Klik "Tampilkan Data" untuk load receipt',
       'Lihat summary: Saldo Bank, Total Aset, Pemasukan, Pengeluaran, Tabungan',
       'Detail breakdown: Income, Investment, Outcome (sorted by nominal terbesar)',
-      'Klik "Cetak / Simpan" untuk download sebagai PNG',
+      'Klik "📥 Cetak / Simpan" untuk download sebagai PNG (fitur Premium)',
       'Di HP: gambar bisa di-share via Web Share API atau long-press untuk save',
     ],
   },
@@ -107,9 +107,9 @@ const SECTIONS = [
   {
     icon: '⚙️',
     title: 'Setup Budget',
-    desc: 'Atur akun bank, kategori & budget bulanan',
+    desc: 'Atur akun bank, kategori & budget bulanan Anda',
     items: [
-      'Klik tombol ⚙️ (gear) di pojok kanan atas',
+      'Klik tombol ⚙️ (gear) di pojok kanan atas dashboard',
       'Rekap Alokasi: lihat total budget per kategori + sisa budget',
       'Akun Bank: tambah/hapus bank (pilih dari 22 bank options)',
       'Kategori: tambah kategori custom, expand untuk lihat sub-kategori',
@@ -122,16 +122,46 @@ const SECTIONS = [
   {
     icon: '🎨',
     title: 'Personalisasi',
-    desc: 'Pilih tema warna & maskot favoritmu',
+    desc: 'Pilih tema warna & maskot favorit Anda',
     items: [
       'Klik tombol 🎨 di header',
       'Tab "Tema Warna": pilih dari tema Free / Premium / VIP',
-      'Tab "Maskot": pilih maskot (emoji) yang kamu suka',
+      'Tab "Maskot": pilih maskot (emoji) yang Anda suka',
       'Warna app berubah INSTANTLY saat dipilih',
       'Maskot muncul di header, dashboard, dan loading screen',
-      'Free tier: 3 tema + 3 maskot',
-      'Premium tier: 6 tema + 6 maskot tambahan',
+      'Basic tier: 2 tema + 3 maskot',
+      'Premium tier: 8 tema + 10 maskot tambahan',
       'VIP tier: eksklusif (khusus akun tertentu)',
+    ],
+  },
+  {
+    icon: '💑',
+    title: 'Couple Budgeting (Premium)',
+    desc: 'Share data budgeting dengan pasangan Anda',
+    items: [
+      'Fitur eksklusif Premium tier — Couple Budgeting',
+      'Klik tombol 👤 di header pill (sebelah "My Budgeting")',
+      'Pilih akun pasangan Anda dari dropdown',
+      'Saat switch ke akun pasangan: Anda bisa input, edit & hapus transaksi mereka',
+      'Banner indikator "📊 Viewing shared data" muncul saat mode shared',
+      'Switch balik ke "My Budget" kapan saja untuk kembali ke data Anda',
+      'Sharing bersifat two-way: pasangan juga bisa akses data Anda',
+      'Limit 1:1 couple — satu partner per user (Premium tier)',
+    ],
+  },
+  {
+    icon: '💎',
+    title: 'Fitur Premium',
+    desc: 'Upgrade ke Premium untuk unlock semua fitur',
+    items: [
+      'Klik menu "💎 Fitur Premium" di Welcome Page',
+      'Lihat semua benefit Premium (8 fitur eksklusif)',
+      'Lihat perbandingan Basic vs Premium tier',
+      'Harga: Rp 88.000/tahun untuk Premium, Rp 50.000/tahun untuk Basic',
+      'Promo: 3 hari FREE TRIAL otomatis saat pertama kali signup',
+      'Klik "💬 Upgrade via WhatsApp" untuk pembayaran manual',
+      'Setelah pembayaran terverifikasi, admin aktifkan Premium tier Anda',
+      'Premium user juga bisa extend subscription via halaman yang sama',
     ],
   },
   {
@@ -143,6 +173,7 @@ const SECTIONS = [
       'Chat langsung ke developer via WhatsApp',
       'Tanya tentang: cara pakai, error, request fitur, dll',
       'Developer akan respon secepatnya (max 24 jam)',
+      'Premium user: priority support (respon < 4 jam)',
     ],
   },
 ]
@@ -166,7 +197,7 @@ export default function CaraPakai({ onBack }: Props) {
         </button>
         <div>
           <h1 className="text-base font-bold text-pink-950">📖 Cara Pakai</h1>
-          <p className="text-[10px] text-pink-700/60">Panduan lengkap Budgeting Master Sync</p>
+          <p className="text-[10px] text-pink-700/60">Panduan lengkap Growsphere Budgeting</p>
         </div>
       </header>
 
@@ -195,8 +226,8 @@ export default function CaraPakai({ onBack }: Props) {
         {/* Footer note */}
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
           <p className="text-[10px] text-amber-800 leading-relaxed">
-            💡 <b>Tips:</b> App ini bekerja terbaik jika kamu rutin mencatat setiap transaksi.
-            <br />Lu bisa akses app dari Home Screen HP (Add to Home Screen) untuk pengalaman seperti native app.
+            💡 <b>Tips:</b> App ini bekerja terbaik jika Anda rutin mencatat setiap transaksi.
+            <br />Anda bisa akses app dari Home Screen HP (Add to Home Screen) untuk pengalaman seperti native app.
           </p>
         </div>
 

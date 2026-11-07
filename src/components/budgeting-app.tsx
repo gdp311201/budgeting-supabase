@@ -18,7 +18,8 @@ import WelcomePage from '@/components/welcome-page'
 import CaraPakai from '@/components/cara-pakai'
 import FiturPremiumPage from '@/components/fitur-premium'
 import FeedbackModal from '@/components/feedback-modal'
-import AccountSwitcher from '@/components/account-switcher'
+import SettingsHubModal from '@/components/settings-hub-modal'
+import AccountSwitcherModal from '@/components/account-switcher-modal'
 import { getShareableUsers, type ShareableUser } from '@/lib/api/subscription'
 import TrialCountdownBanner from '@/components/trial-countdown-banner'
 import ExpiryCountdownBanner from '@/components/expiry-countdown-banner'
@@ -55,12 +56,10 @@ const MASCOT_EMOJIS: Record<string, string> = {
 
 const PIN_STORAGE_KEY = 'bms_pin_hash'
 
-// WhatsApp number
 const WA_NUMBER = '6281575859792'
 const WA_LINK_DEFAULT = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App`
 const WA_LINK_FEEDBACK = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App`
 
-// Sprint 3A: added 'fitur-premium' state
 type AppState = 'pin-setup' | 'pin-lock' | 'welcome' | 'dashboard' | 'cara-pakai' | 'fitur-premium' | 'setting'
 
 export default function BudgetingApp({
@@ -71,26 +70,33 @@ export default function BudgetingApp({
   initialProfile: Profile | null
 }) {
   const [profile, setProfile] = useState<Profile | null>(initialProfile)
-  const [showThemePicker, setShowThemePicker] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // ===== Shared access state (Batch 3) =====
+  // ===== Shared access state =====
   const [activeUserId, setActiveUserId] = useState<string | null>(null)
   const [shareableUsers, setShareableUsers] = useState<ShareableUser[]>([])
-  const [sharedAccessError, setSharedAccessError] = useState<string | null>(null)
 
   // Onboarding check
   const [showOnboarding, setShowOnboarding] = useState(
     () => !initialProfile?.full_name
   )
 
-  // App state flow: PIN → Welcome → Dashboard/CaraPakai/FiturPremium/Setting
+  // App state flow
   const [appState, setAppState] = useState<AppState>(() => {
     if (typeof window === 'undefined') return 'welcome'
     const pinHash = localStorage.getItem(PIN_STORAGE_KEY)
     if (pinHash) return 'pin-lock'
     return 'pin-setup'
   })
+
+  // ===== Sprint 3A: Consolidated settings modals =====
+  const [showSettingsHub, setShowSettingsHub] = useState(false)
+  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false)
+  const [showThemePicker, setShowThemePicker] = useState(false)
+  const [showSetup, setShowSetup] = useState(false)
+  const [showFeedback, setShowFeedback] = useState(false)
+
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
   // Fetch updated profile when refreshKey changes
   useEffect(() => {
@@ -107,29 +113,25 @@ export default function BudgetingApp({
     fetchProfile()
   }, [refreshKey, user.id])
 
-  // ===== Fetch shareable users (Batch 3) =====
+  // Fetch shareable users
   useEffect(() => {
     if (appState !== 'dashboard' && appState !== 'welcome') return
     let cancelled = false
     async function fetchShareable() {
       try {
-        setSharedAccessError(null)
         const users = await getShareableUsers()
         if (!cancelled) setShareableUsers(users)
       } catch (err: any) {
         if (!cancelled) {
           if (!err.message?.includes('Premium tier required')) {
             console.warn('Failed to load shareable users:', err.message)
-            setSharedAccessError(err.message)
           }
           setShareableUsers([])
         }
       }
     }
     fetchShareable()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [appState, user.id])
 
   // Apply theme from profile
@@ -162,8 +164,7 @@ export default function BudgetingApp({
     document.body.style.background = `linear-gradient(135deg, var(--gradient-1, #8a96a8), var(--gradient-2, #ba9eb1), var(--gradient-3, #e3b9ca))`
   }, [profile])
 
-  // Dynamic favicon + apple-touch-icon + manifest (per user)
-  // Sprint 1 Fix: Elephant favicon is EXCLUSIVE to Elsa only.
+  // Dynamic favicon (Sprint 1 Fix: Elephant EXCLUSIVE to Elsa)
   useEffect(() => {
     const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
     const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
@@ -229,13 +230,20 @@ export default function BudgetingApp({
       })
   }, [profile?.icon_name])
 
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard')
-  const [showSetup, setShowSetup] = useState(false)
-  const [showFeedback, setShowFeedback] = useState(false)
-
   function handleOnboardingComplete(updatedProfile: Profile) {
     setProfile(updatedProfile)
     setShowOnboarding(false)
+  }
+
+  // ===== Settings Hub handler =====
+  function handleSettingsHubSelect(option: 'account' | 'theme' | 'setup') {
+    setShowSettingsHub(false)
+    // Small delay so hub closes before sub-modal opens
+    setTimeout(() => {
+      if (option === 'account') setShowAccountSwitcher(true)
+      else if (option === 'theme') setShowThemePicker(true)
+      else if (option === 'setup') setShowSetup(true)
+    }, 100)
   }
 
   // ===== PIN lock screen =====
@@ -300,16 +308,9 @@ export default function BudgetingApp({
     return <CaraPakai onBack={() => setAppState('welcome')} />
   }
 
-  // ===== FITUR PREMIUM PAGE (Sprint 3A NEW) =====
+  // ===== FITUR PREMIUM PAGE =====
   if (appState === 'fitur-premium') {
     return <FiturPremiumPage onBack={() => setAppState('welcome')} />
-  }
-
-  // ===== SETTING (direct from welcome page, if needed) =====
-  if (appState === 'setting') {
-    return (
-      <SetupView user={user} onClose={() => setAppState('welcome')} />
-    )
   }
 
   // ===== MAIN APP (Dashboard + tabs) =====
@@ -319,7 +320,7 @@ export default function BudgetingApp({
       <div className="wallpaper-bg" aria-hidden="true" />
       <div className="wallpaper-veil" aria-hidden="true" />
 
-      {/* Header with safe-area-inset-top for iPhone notch */}
+      {/* Header — CLEAN, no Account Switcher or Theme Picker buttons */}
       <header
         className="text-center py-3 px-4 relative z-10"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
@@ -333,33 +334,15 @@ export default function BudgetingApp({
           <span className="text-xs font-semibold text-pink-950/80 tracking-wide">
             {profile?.app_name ?? 'Budgeting Master Sync'}
           </span>
-          {/* ===== Account Switcher (Sprint 3A) — positioned INSIDE header pill ===== */}
-          <AccountSwitcher
-            activeUserId={activeUserId}
-            shareableUsers={shareableUsers}
-            myEmail={user.email ?? ''}
-            myNickname={profile?.full_name ?? null}
-            onSwitch={(userId) => {
-              setActiveUserId(userId)
-              setRefreshKey((k) => k + 1)
-            }}
-          />
-          <button
-            onClick={() => setShowThemePicker(true)}
-            className="ml-1 w-6 h-6 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white text-xs font-bold flex items-center justify-center hover:scale-110 transition shadow-sm"
-            aria-label="Pilih Tema"
-          >
-            🎨
-          </button>
         </div>
       </header>
 
-      {/* Floating Setting button (top-right) */}
+      {/* Floating Settings button (top-right) → opens Settings Hub */}
       <button
-        onClick={() => setShowSetup(true)}
+        onClick={() => setShowSettingsHub(true)}
         className="fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white/70 backdrop-blur-md border border-pink-200/60 shadow-lg flex items-center justify-center hover:scale-110 transition"
         style={{ top: 'max(env(safe-area-inset-top, 0px), 16px)' }}
-        aria-label="Setting"
+        aria-label="Settings"
       >
         <svg className="w-5 h-5 text-pink-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -391,7 +374,7 @@ export default function BudgetingApp({
         </svg>
       </a>
 
-      {/* Floating Feedback button (bottom-right, above WhatsApp) */}
+      {/* Floating Feedback button */}
       <button
         onClick={() => setShowFeedback(true)}
         className="fixed bottom-40 right-4 z-40 w-12 h-12 rounded-full bg-pink-500 hover:bg-pink-600 shadow-lg flex items-center justify-center transition hover:scale-110"
@@ -403,22 +386,22 @@ export default function BudgetingApp({
         </svg>
       </button>
 
-      {/* Active account indicator banner (shown when viewing shared data) */}
+      {/* Active account indicator banner */}
       {activeUserId !== null && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 bg-pink-500/90 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md">
           📊 Viewing shared data — Read/Write mode
         </div>
       )}
 
-      {/* ===== Announcement Modal (Sprint 2B) ===== */}
+      {/* Announcement Modal */}
       <AnnouncementModal />
 
-      {/* ===== Trial Countdown Banner (Batch 5) ===== */}
+      {/* Trial Countdown Banner */}
       <div className="px-4 mb-2">
         <TrialCountdownBanner />
       </div>
 
-      {/* ===== Expiry Countdown Banner (Batch 5) ===== */}
+      {/* Expiry Countdown Banner */}
       <div className="px-4 mb-2">
         <ExpiryCountdownBanner />
       </div>
@@ -436,35 +419,54 @@ export default function BudgetingApp({
           />
         </div>
         <div className={activeTab === 'input' ? 'block' : 'hidden'}>
-          <InputView
-            user={user}
-            targetUserId={activeUserId ?? undefined}
-          />
+          <InputView user={user} targetUserId={activeUserId ?? undefined} />
         </div>
         <div className={activeTab === 'mutasi' ? 'block' : 'hidden'}>
-          <MutasiView
-            targetUserId={activeUserId ?? undefined}
-            refreshKey={refreshKey}
-          />
+          <MutasiView targetUserId={activeUserId ?? undefined} refreshKey={refreshKey} />
         </div>
         <div className={activeTab === 'receipt' ? 'block' : 'hidden'}>
-          <ReceiptView
-            targetUserId={activeUserId ?? undefined}
-            refreshKey={refreshKey}
-          />
+          <ReceiptView targetUserId={activeUserId ?? undefined} refreshKey={refreshKey} />
         </div>
         <div className={activeTab === 'search' ? 'block' : 'hidden'}>
-          <SearchView
-            targetUserId={activeUserId ?? undefined}
-            refreshKey={refreshKey}
-          />
+          <SearchView targetUserId={activeUserId ?? undefined} refreshKey={refreshKey} />
         </div>
       </main>
 
-      {/* Floating bottom navigation (5 tabs) */}
+      {/* Floating bottom navigation */}
       <BottomNav tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
 
-      {/* Setup modal */}
+      {/* ===== MODALS ===== */}
+
+      {/* Settings Hub Modal — gateway to Account Switcher, Theme Picker, Setup */}
+      <SettingsHubModal
+        open={showSettingsHub}
+        onClose={() => setShowSettingsHub(false)}
+        onSelect={handleSettingsHubSelect}
+        showAccountSwitcher={shareableUsers.length > 0}
+      />
+
+      {/* Account Switcher Modal (sub-modal from Settings Hub) */}
+      <AccountSwitcherModal
+        open={showAccountSwitcher}
+        onClose={() => setShowAccountSwitcher(false)}
+        activeUserId={activeUserId}
+        shareableUsers={shareableUsers}
+        myEmail={user.email ?? ''}
+        myNickname={profile?.full_name ?? null}
+        onSwitch={(userId) => {
+          setActiveUserId(userId)
+          setRefreshKey((k) => k + 1)
+        }}
+      />
+
+      {/* Theme Picker Modal */}
+      <ThemePickerModal
+        open={showThemePicker}
+        onClose={() => setShowThemePicker(false)}
+        onApply={() => setRefreshKey((k) => k + 1)}
+      />
+
+      {/* Setup Budget (sub-modal from Settings Hub) */}
       {showSetup && (
         <SetupView
           user={user}
@@ -473,13 +475,6 @@ export default function BudgetingApp({
         />
       )}
 
-      {/* Theme picker modal */}
-      <ThemePickerModal
-        open={showThemePicker}
-        onClose={() => setShowThemePicker(false)}
-        onApply={() => setRefreshKey((k) => k + 1)}
-      />
-
       {/* Feedback modal */}
       <FeedbackModal
         open={showFeedback}
@@ -487,10 +482,10 @@ export default function BudgetingApp({
         waLink={WA_LINK_FEEDBACK}
       />
 
-      {/* ===== Maintenance Modal (Batch 5) ===== */}
+      {/* Maintenance Modal */}
       <MaintenanceModal />
 
-      {/* ===== Read-Only Overlay (Batch 5) ===== */}
+      {/* Read-Only Overlay */}
       <ReadOnlyOverlay />
     </div>
   )

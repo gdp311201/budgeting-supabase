@@ -20,7 +20,7 @@ export default async function LoginPage({
     <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-pink-100 via-rose-50 to-purple-100 p-4 overflow-y-auto">
       <div className="w-full max-w-sm text-center space-y-6 py-8">
         {/* Icon */}
-        <div className="text-7xl mb-2 animate-pulse">🐘</div>
+        <div className="w-20 h-20 mx-auto mb-2 animate-pulse"><img src="https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png" alt="GDP" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))" }} /></div>
 
         {/* Title */}
         <div className="space-y-1">
@@ -168,7 +168,7 @@ export default async function LoginPage({
 
         {/* Footer */}
         <p className="text-[10px] text-pink-800/50">
-          Growsphere Digital Product · Crafted with ❤️ by Julyo Sechar
+          Growsphere Digital Product · Crafted by Julyo Sechar
         </p>
       </div>
     </main>

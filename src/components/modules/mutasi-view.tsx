@@ -68,14 +68,13 @@ export default function MutasiView({ targetUserId, refreshKey }: Props = {}) {
     }
   }
 
-  // Auto-reload when refreshKey changes (account switched) (Batch 4)
+  // Sprint 4B: Clear data on account switch (user must click button to reload)
   useEffect(() => {
-    if (refreshKey === undefined) return
-    if (accountId) {
-      loadMutasi()
-    }
+    if (refreshKey === undefined && targetUserId === undefined) return
+    setData(null)
+    setError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey])
+  }, [refreshKey, targetUserId])
 
   const groupedAccounts = master ? groupAccountsByType(master.accounts) : null
 

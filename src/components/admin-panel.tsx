@@ -70,7 +70,7 @@ interface AnnouncementConfig {
   expires_at: string | null
 }
 
-type TabKey = 'stats' | 'users' | 'allowlist' | 'maintenance' | 'banner'
+type TabKey = 'stats' | 'users' | 'allowlist' | 'maintenance' | 'banner' | 'feedback'
 
 interface Props {
   adminEmail: string
@@ -165,6 +165,13 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   })
   const [announcementSaving, setAnnouncementSaving] = useState(false)
 
+  // Sprint 12: Feedback state
+  const [feedbackList, setFeedbackList] = useState<any[]>([])
+  const [feedbackLoading, setFeedbackLoading] = useState(true)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
+  const [feedbackSearch, setFeedbackSearch] = useState('')
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'new' | 'read' | 'responded'>('all')
+
   // Modal states
   const [changeTierUser, setChangeTierUser] = useState<AdminUser | null>(null)
   const [suspendUser, setSuspendUser] = useState<AdminUser | null>(null)
@@ -251,13 +258,30 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
     }
   }, [])
 
+  // Sprint 12: Load feedback
+  const loadFeedback = useCallback(async () => {
+    setFeedbackLoading(true)
+    setFeedbackError(null)
+    try {
+      const res = await fetch('/api/admin/feedback')
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to load feedback')
+      setFeedbackList(json.feedback ?? [])
+    } catch (err: any) {
+      setFeedbackError(err.message ?? 'Failed to load feedback')
+    } finally {
+      setFeedbackLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     loadWhitelist()
     loadUsers()
     loadStats()
     loadMaintenance()
     loadAnnouncement()
-  }, [loadWhitelist, loadUsers, loadStats, loadMaintenance, loadAnnouncement])
+    loadFeedback()
+  }, [loadWhitelist, loadUsers, loadStats, loadMaintenance, loadAnnouncement, loadFeedback])
 
   // ============================================================
   // Whitelist handlers (removed Nama Lengkap field)
@@ -522,6 +546,48 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
     return entry.email.toLowerCase().includes(q) || (entry.notes?.toLowerCase().includes(q) ?? false)
   })
 
+  // Sprint 12: Feedback handlers
+  async function handleRespondFeedback(feedbackId: string) {
+    const response = prompt('Tulis respons untuk feedback ini:')
+    if (!response) return
+    try {
+      const res = await fetch('/api/admin/feedback/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedbackId, response }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
+      alert('✅ Respons terkirim!')
+      await loadFeedback()
+    } catch (err: any) {
+      alert('❌ Error: ' + err.message)
+    }
+  }
+
+  async function handleMarkRead(feedbackId: string) {
+    try {
+      const res = await fetch('/api/admin/feedback/mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedbackId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
+      await loadFeedback()
+    } catch (err: any) {
+      alert('❌ Error: ' + err.message)
+    }
+  }
+
+  // Sprint 12: Filter feedback
+  const filteredFeedback = feedbackList.filter(f => {
+    if (feedbackFilter !== 'all' && f.status !== feedbackFilter) return false
+    if (!feedbackSearch) return true
+    const q = feedbackSearch.toLowerCase()
+    return (f.email?.toLowerCase().includes(q) ?? false) || (f.message?.toLowerCase().includes(q) ?? false)
+  })
+
   // ============================================================
   // Render
   // ============================================================
@@ -560,6 +626,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
               { key: 'allowlist', label: 'Whitelist', icon: '✉️', short: '✉️' },
               { key: 'maintenance', label: 'Maintenance', icon: '🔧', short: '🔧' },
               { key: 'banner', label: 'Pengumuman', icon: '📢', short: '📢' },
+              { key: 'feedback', label: 'Feedback', icon: '💬', short: '💬' },
             ] as const).map((tab) => (
               <button
                 key={tab.key}
@@ -1301,6 +1368,151 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
               </p>
             </section>
           )}
+        {/* ============================================================ */}
+        {/* TAB: Feedback                                                  */}
+        {/* ============================================================ */}
+        {activeTab === 'feedback' && (
+          <section className="space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-100">Feedback User</h2>
+              <p className="text-xs text-slate-400 mt-1">
+                {filteredFeedback.length} dari {feedbackList.length} feedback
+              </p>
+            </div>
+
+            {/* Filter + Search */}
+            <div className="flex items-center gap-2">
+              <select
+                value={feedbackFilter}
+                onChange={(e) => setFeedbackFilter(e.target.value as any)}
+                className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+              >
+                <option value="all">Semua</option>
+                <option value="new">🆕 Baru</option>
+                <option value="read">📖 Dibaca</option>
+                <option value="responded">✅ Direspons</option>
+              </select>
+              <input
+                type="text"
+                value={feedbackSearch}
+                onChange={(e) => setFeedbackSearch(e.target.value)}
+                placeholder="🔍 Cari email atau pesan..."
+                className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none flex-1"
+              />
+              <button
+                onClick={loadFeedback}
+                className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/50 transition"
+              >
+                ↻ Refresh
+              </button>
+            </div>
+
+            {feedbackLoading && (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-500 mb-2"></div>
+                <p className="text-sm text-slate-400">Loading feedback...</p>
+              </div>
+            )}
+
+            {feedbackError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-300">
+                ❌ {feedbackError}
+              </div>
+            )}
+
+            {!feedbackLoading && !feedbackError && filteredFeedback.length === 0 && (
+              <p className="text-sm text-slate-400 italic text-center py-8">
+                Belum ada feedback
+              </p>
+            )}
+
+            {/* Feedback cards */}
+            <div className="grid gap-3">
+              {!feedbackLoading && !feedbackError && filteredFeedback.map((f) => (
+                <div
+                  key={f.id}
+                  className={cn(
+                    'bg-slate-900/60 backdrop-blur-sm border rounded-2xl p-4',
+                    f.status === 'new' ? 'border-cyan-500/40' : 'border-slate-800'
+                  )}
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-slate-100">
+                          {f.email || 'Anonymous'}
+                        </span>
+                        <span className={cn(
+                          'text-[9px] px-2 py-0.5 rounded-full font-bold border',
+                          f.status === 'new' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' :
+                          f.status === 'read' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                          'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        )}>
+                          {f.status === 'new' ? '🆕 BARU' : f.status === 'read' ? '📖 DIBACA' : '✅ DIRESPONS'}
+                        </span>
+                        <span className="text-[9px] text-slate-500">
+                          {f.category === 'bug' ? '🐛 Bug' : f.category === 'feature' ? '💡 Feature' : f.category === 'pricing' ? '💰 Pricing' : '💬 General'}
+                        </span>
+                      </div>
+                      {/* Rating */}
+                      <div className="flex items-center gap-0.5 mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span key={i} className={i < f.rating ? 'text-amber-400 text-xs' : 'text-slate-600 text-xs'}>⭐</span>
+                        ))}
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-slate-500 shrink-0">
+                      {new Date(f.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+
+                  {/* Message */}
+                  <div className="bg-slate-800/50 rounded-xl px-3 py-2 mb-2">
+                    <p className="text-xs text-slate-300 leading-relaxed">{f.message}</p>
+                  </div>
+
+                  {/* Admin response */}
+                  {f.admin_response && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2 mb-2">
+                      <p className="text-[9px] uppercase tracking-wider font-bold text-emerald-400 mb-0.5">Respons Admin:</p>
+                      <p className="text-xs text-emerald-200">{f.admin_response}</p>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {f.status === 'new' && (
+                      <button
+                        onClick={() => handleMarkRead(f.id)}
+                        className="text-[10px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg font-semibold border border-amber-500/30 transition"
+                      >
+                        📖 Tandai Dibaca
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleRespondFeedback(f.id)}
+                      className="text-[10px] bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-lg font-semibold border border-cyan-500/30 transition"
+                    >
+                      💬 Respons
+                    </button>
+                    {f.email && (
+                      <a
+                        href={`https://wa.me/6281575859792?text=Halo%2C%20terima%20kasih%20atas%20feedback%20Anda%20(${f.category}).%20`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] bg-green-500/20 hover:bg-green-500/30 text-green-300 px-3 py-1.5 rounded-lg font-semibold border border-green-500/30 transition"
+                      >
+                        💬 WA
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         </main>
       </div>
 

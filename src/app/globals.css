@@ -548,7 +548,7 @@ body::after {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   animation: rotateModalAngle 6s linear infinite;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
 }
 

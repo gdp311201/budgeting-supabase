@@ -335,6 +335,28 @@ export async function POST(
         await grantMascotAccess(body.mascotId, body.email)
         return jsonSuccess({})
       }
+      case 'whitelist/restore': {
+        if (!body.email) return jsonError('email diperlukan', 400)
+        // Sprint 9: Restore deleted/suspended user
+        // 1. Re-add to whitelist (if not exists)
+        await addToWhitelist({
+          email: body.email,
+          is_premium: false,
+          invited_by: 'admin',
+          notes: 'Restored by admin',
+        })
+        // 2. Set tier back to 'basic' using service-role client
+        const svcRestore = createServiceClient()
+        const { data: restoreProfile } = await svcRestore
+          .from('profiles')
+          .select('id')
+          .ilike('email', body.email)
+          .single()
+        if (restoreProfile) {
+          await adminMasterSetUserTier(userId, restoreProfile.id, 'basic', null, 'Restored by admin')
+        }
+        return jsonSuccess({})
+      }
 
       default:
         return jsonError(`Unknown POST action: ${action}`, 400)

@@ -267,16 +267,30 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
               </div>
             </div>
 
-            {/* AI Insights */}
+            {/* AI Insights — Staggered fade-in animation */}
             {insights.insights && insights.insights.length > 0 && (
-              <div className="bg-pink-50/80 border border-pink-200/60 rounded-xl p-2 space-y-1">
+              <div className="bg-pink-50/80 border border-pink-200/60 rounded-xl p-2.5 space-y-1.5">
                 {insights.insights.map((insight, idx) => (
-                  <p key={idx} className="text-[10px] text-pink-900/80 font-medium leading-relaxed">
-                    {insight}
-                  </p>
+                  <div
+                    key={idx}
+                    className="flex items-start gap-1.5 text-[10px] text-pink-900/80 font-medium leading-relaxed"
+                    style={{
+                      animation: `insightFadeIn 0.4s ease-out ${idx * 0.15}s backwards`,
+                    }}
+                  >
+                    <span className="text-pink-500 font-bold shrink-0">{idx + 1}.</span>
+                    <span>{insight}</span>
+                  </div>
                 ))}
               </div>
             )}
+
+            <style>{`
+              @keyframes insightFadeIn {
+                0% { opacity: 0; transform: translateX(-8px); }
+                100% { opacity: 1; transform: translateX(0); }
+              }
+            `}</style>
           </div>
         </div>
       )}

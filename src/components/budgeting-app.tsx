@@ -23,7 +23,7 @@ import TrialCountdownBanner from '@/components/trial-countdown-banner'
 import ExpiryCountdownBanner from '@/components/expiry-countdown-banner'
 import MaintenanceModal from '@/components/maintenance-modal'
 import ReadOnlyOverlay from '@/components/read-only-overlay'
-import AnnouncementBanner from '@/components/announcement-banner'
+import AnnouncementModal from '@/components/announcement-modal'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -423,10 +423,8 @@ export default function BudgetingApp({
         </div>
       )}
 
-      {/* ===== Announcement Banner (Sprint 2A) — admin-set announcement ===== */}
-      <div className="px-4 mb-2">
-        <AnnouncementBanner />
-      </div>
+      {/* ===== Announcement Modal (Sprint 2B) — full-page popup for admin announcements ===== */}
+      <AnnouncementModal />
 
       {/* ===== Trial Countdown Banner (Batch 5) ===== */}
       <div className="px-4 mb-2">

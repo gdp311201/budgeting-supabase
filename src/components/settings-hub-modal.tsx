@@ -67,9 +67,10 @@ export default function SettingsHubModal({
       onClick={onClose}
     >
       <div
-        className="bg-white/80 backdrop-blur-xl w-full max-w-xs rounded-3xl p-5 text-center shadow-2xl animate-pop premium-modal-border"
+        className="premium-modal-border w-full max-w-xs animate-pop"
         onClick={(e) => e.stopPropagation()}
       >
+      <div className="bg-white/80 backdrop-blur-xl rounded-[calc(1.5rem-2px)] p-5 text-center shadow-2xl">
         {/* Big icon at top */}
         <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-pink-100 border border-pink-200">
           ⚙️
@@ -116,7 +117,8 @@ export default function SettingsHubModal({
           Tutup
         </button>
       </div>
-    </div>,
+    </div>
+      </div>,
     document.body
   )
 }

@@ -747,21 +747,23 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                       {/* Action buttons */}
                       <div className="flex gap-2 flex-wrap">
                         {u.tier !== 'deleted' && (
-                        <button
-                          onClick={() => setChangeTierUser(u)}
-                          className="text-[11px] bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-lg font-semibold border border-cyan-500/30 transition"
-                        >
-                          🔄 Change Tier
-                        </button>
-                        <button
-                          onClick={() => handleUpgradePremium(u.user_id, u.email)}
-                          disabled={u.tier === 'premium' || u.tier === 'vip' || u.is_admin}
-                          className="text-[11px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-lg font-semibold border border-emerald-500/30 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          ⭐ Upgrade Premium
-                        </button>
+                          <>
+                            <button
+                              onClick={() => setChangeTierUser(u)}
+                              className="text-[11px] bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-lg font-semibold border border-cyan-500/30 transition"
+                            >
+                              🔄 Change Tier
+                            </button>
+                            <button
+                              onClick={() => handleUpgradePremium(u.user_id, u.email)}
+                              disabled={u.tier === 'premium' || u.tier === 'vip' || u.is_admin}
+                              className="text-[11px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-lg font-semibold border border-emerald-500/30 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              ⭐ Upgrade Premium
+                            </button>
+                          </>
                         )}
-                        {u.tier !== 'suspended' && !u.is_admin && (
+                        {u.tier !== 'suspended' && !u.is_admin && u.tier !== 'deleted' && (
                           <button
                             onClick={() => setSuspendUser(u)}
                             className="text-[11px] bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg font-semibold border border-red-500/30 transition"

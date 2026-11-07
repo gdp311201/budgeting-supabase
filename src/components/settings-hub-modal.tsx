@@ -67,7 +67,7 @@ export default function SettingsHubModal({
       onClick={onClose}
     >
       <div
-        className="bg-white/95 w-full max-w-xs rounded-3xl p-5 text-center shadow-2xl animate-pop premium-modal-border"
+        className="bg-white/80 backdrop-blur-xl w-full max-w-xs rounded-3xl p-5 text-center shadow-2xl animate-pop premium-modal-border"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Big icon at top */}

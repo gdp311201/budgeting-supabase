@@ -21,8 +21,12 @@ interface Props {
  *
  * Sprint 3A Redesign + Fix:
  * - Small circular icon button (24x24px) inside header pill
- * - Click → CENTER POPUP MODAL (not dropdown) — like DeleteConfirmModal
- * - Backdrop blur, center card, click outside to close
+ * - Click → CENTER POPUP MODAL (style seperti DeleteConfirmModal)
+ *   - Big icon di atas
+ *   - Title
+ *   - Account list card
+ *   - Tutup button di bawah
+ * - Backdrop blur, click outside to close
  * - Hidden entirely if no shareable users (basic tier users see nothing)
  */
 export default function AccountSwitcher({
@@ -59,32 +63,29 @@ export default function AccountSwitcher({
         {currentIcon}
       </button>
 
-      {/* ===== CENTER POPUP MODAL (like DeleteConfirmModal) ===== */}
+      {/* ===== CENTER POPUP MODAL (style mirip DeleteConfirmModal) ===== */}
       {open && (
         <div
-          className="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-pink-950/60 backdrop-blur-md"
+          className="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-pink-950/40 backdrop-blur-[5px]"
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl max-w-xs w-full overflow-hidden animate-pop"
+            className="bg-white/95 w-full max-w-xs rounded-3xl p-5 text-center shadow-2xl animate-pop"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500">
-              <div>
-                <h3 className="text-base font-bold text-white tracking-wide">Switch Account</h3>
-                <p className="text-[10px] text-white/80">Pilih akun untuk lihat datanya</p>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="w-8 h-8 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center hover:bg-white/40 transition"
-              >
-                ✕
-              </button>
+            {/* Big icon at top — seperti DeleteConfirmModal style */}
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-pink-100 border border-pink-200">
+              {isMyBudget ? '👤' : '📊'}
             </div>
 
-            {/* Account options */}
-            <div className="px-4 py-3 space-y-2 max-h-[60vh] overflow-y-auto">
+            {/* Title */}
+            <h3 className="text-sm font-bold text-pink-950 mb-1">Switch Account</h3>
+            <p className="text-[11px] text-pink-700/70 mb-3">
+              Pilih akun untuk melihat data
+            </p>
+
+            {/* Account list card */}
+            <div className="text-left bg-pink-50 border border-pink-100 rounded-xl px-3 py-2 mb-3 space-y-1.5">
               {/* My Budget option */}
               <button
                 onClick={() => {
@@ -92,20 +93,18 @@ export default function AccountSwitcher({
                   setOpen(false)
                 }}
                 className={cn(
-                  'w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-2 border',
-                  isMyBudget
-                    ? 'bg-pink-100 border-pink-300'
-                    : 'bg-white/60 border-pink-200 hover:bg-pink-50'
+                  'w-full text-left px-2 py-1.5 rounded-lg transition flex items-center gap-2',
+                  isMyBudget ? 'bg-white shadow-sm' : 'hover:bg-white/70'
                 )}
               >
-                <span className="text-xl">👤</span>
+                <span className="text-base">👤</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-pink-950 truncate">
+                  <p className="text-[11px] font-bold text-pink-950 truncate">
                     {myNickname || 'My Budget'}
                   </p>
-                  <p className="text-[10px] text-pink-700/60 truncate">{myEmail}</p>
+                  <p className="text-[9px] text-pink-700/60 truncate">{myEmail}</p>
                 </div>
-                {isMyBudget && <span className="text-pink-500 text-base">✓</span>}
+                {isMyBudget && <span className="text-pink-500 text-sm">✓</span>}
               </button>
 
               {/* Shareable users */}
@@ -119,33 +118,37 @@ export default function AccountSwitcher({
                       setOpen(false)
                     }}
                     className={cn(
-                      'w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-2 border',
-                      isActive
-                        ? 'bg-pink-100 border-pink-300'
-                        : 'bg-white/60 border-pink-200 hover:bg-pink-50'
+                      'w-full text-left px-2 py-1.5 rounded-lg transition flex items-center gap-2',
+                      isActive ? 'bg-white shadow-sm' : 'hover:bg-white/70'
                     )}
                   >
-                    <span className="text-xl">📊</span>
+                    <span className="text-base">📊</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-pink-950 truncate">
+                      <p className="text-[11px] font-bold text-pink-950 truncate">
                         {user.full_name || user.email}
                       </p>
-                      <p className="text-[10px] text-pink-700/60 truncate">
+                      <p className="text-[9px] text-pink-700/60 truncate">
                         {user.email}
                       </p>
                     </div>
-                    {isActive && <span className="text-pink-500 text-base">✓</span>}
+                    {isActive && <span className="text-pink-500 text-sm">✓</span>}
                   </button>
                 )
               })}
             </div>
 
             {/* Footer hint */}
-            <div className="px-4 py-2 bg-pink-50/50 border-t border-pink-100">
-              <p className="text-[9px] text-pink-700/60 italic text-center">
-                💡 Premium feature — Shared Household Budget
-              </p>
-            </div>
+            <p className="text-[10px] text-pink-700/80 font-medium mb-4">
+              💡 Premium feature — Shared Household Budget
+            </p>
+
+            {/* Tutup button */}
+            <button
+              onClick={() => setOpen(false)}
+              className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-sm transition"
+            >
+              Tutup
+            </button>
           </div>
         </div>
       )}

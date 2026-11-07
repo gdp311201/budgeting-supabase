@@ -11,10 +11,11 @@ interface Props {
 }
 
 const CATEGORIES = [
-  { value: 'bug', label: '🐛 Bug Report' },
-  { value: 'feature', label: '💡 Feature Request' },
-  { value: 'general', label: '💬 General Feedback' },
-  { value: 'pricing', label: '💰 Pricing Question' },
+  { value: 'bug', label: '🐛 Laporan Bug' },
+  { value: 'feature', label: '💡 Request Fitur' },
+  { value: 'general', label: '💬 Umpan Balik Umum' },
+  { value: 'pricing', label: '💰 Pertanyaan Harga' },
+  { value: 'other', label: '⚠️ Lain-lain' },
 ]
 
 export default function FeedbackModal({ open, onClose, waLink }: Props) {
@@ -25,10 +26,42 @@ export default function FeedbackModal({ open, onClose, waLink }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [adminReplies, setAdminReplies] = useState<any[]>([])
+  const [showReplies, setShowReplies] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Check for admin responses
+    if (open) {
+      loadAdminReplies()
+    }
+  }, [open])
+
+  async function loadAdminReplies() {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('feedback')
+        .select('*')
+        .eq('user_id', user.id)
+        .not('admin_response', 'is', null)
+        .order('responded_at', { ascending: false })
+      setAdminReplies(data ?? [])
+      // Check if any unviewed
+      const unviewed = (data ?? []).filter(r => !r.is_viewed_by_user)
+      if (unviewed.length > 0) {
+        setShowReplies(true)
+        // Mark as viewed
+        for (const reply of unviewed) {
+          await supabase.from('feedback').update({ is_viewed_by_user: true }).eq('id', reply.id)
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load admin replies:', err)
+    }
+  }
 
   if (!open || !mounted || typeof document === 'undefined') return null
 
@@ -97,8 +130,62 @@ export default function FeedbackModal({ open, onClose, waLink }: Props) {
                 Tutup
               </button>
             </div>
+          ) : showReplies && adminReplies.length > 0 ? (
+            <>
+              <div className="text-center mb-3">
+                <div className="w-14 h-14 mx-auto mb-2 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-emerald-100 border border-emerald-200">
+                  📬
+                </div>
+                <h3 className="text-sm font-bold text-pink-950">Pesan dari Developer</h3>
+                <p className="text-[11px] text-pink-700/70">Developer telah merespons feedback Anda</p>
+              </div>
+
+              {/* Admin replies */}
+              <div className="space-y-2 mb-3 max-h-[300px] overflow-y-auto">
+                {adminReplies.map((reply) => (
+                  <div key={reply.id} className="bg-pink-50/80 border border-pink-200/60 rounded-xl p-3">
+                    {/* Original feedback */}
+                    <div className="bg-white/60 rounded-lg p-2 mb-2">
+                      <p className="text-[9px] uppercase font-bold text-pink-700 mb-0.5">Feedback Anda:</p>
+                      <p className="text-[10px] text-pink-900/70 italic">"{reply.message}"</p>
+                    </div>
+                    {/* Admin response */}
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2">
+                      <p className="text-[9px] uppercase font-bold text-emerald-700 mb-0.5">Respons Developer:</p>
+                      <p className="text-[11px] text-emerald-900 font-medium leading-relaxed">{reply.admin_response}</p>
+                      <p className="text-[9px] text-emerald-600/60 mt-1">
+                        {new Date(reply.responded_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowReplies(false)}
+                className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm"
+              >
+                ✍️ Kirim Feedback Baru
+              </button>
+              <button
+                onClick={handleClose}
+                className="w-full mt-2 text-pink-700/60 hover:text-pink-900 text-xs font-medium py-1"
+              >
+                Tutup
+              </button>
+            </>
           ) : (
             <>
+              {/* Quick check for replies button */}
+              {adminReplies.length > 0 && (
+                <button
+                  onClick={() => setShowReplies(true)}
+                  className="w-full bg-emerald-500/10 border border-emerald-300/40 text-emerald-700 font-semibold py-2 px-4 rounded-xl text-xs transition mb-3 flex items-center justify-center gap-2"
+                >
+                  📬 Lihat {adminReplies.length} Pesan dari Developer
+                </button>
+              )}
+
               <div className="text-center mb-4">
                 <div className="w-14 h-14 mx-auto mb-2 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-pink-100 border border-pink-200">
                   💬

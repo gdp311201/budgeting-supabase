@@ -360,15 +360,15 @@ export default function BudgetingApp({
         </svg>
       </button>
 
-      {/* Floating Help button (top-left) → Cara Pakai */}
+      {/* Floating Home button (top-left) → Welcome Page */}
       <button
-        onClick={() => setAppState('cara-pakai')}
+        onClick={() => setAppState('welcome')}
         className="fixed top-4 left-4 z-40 w-10 h-10 rounded-full bg-white/70 backdrop-blur-md border border-pink-200/60 shadow-lg flex items-center justify-center hover:scale-110 transition"
         style={{ top: 'max(env(safe-area-inset-top, 0px), 16px)' }}
-        aria-label="Cara Pakai"
-        title="Cara Pakai"
+        aria-label="Home"
+        title="Kembali ke Home"
       >
-        💡
+        🏠
       </button>
 
       {/* Floating WhatsApp button */}

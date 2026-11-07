@@ -289,7 +289,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pink-950/50 backdrop-blur-md"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[92vh] animate-pop overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-xl w-full max-w-md rounded-3xl shadow-2xl flex flex-col max-h-[92vh] animate-pop overflow-hidden premium-modal-border">
         {/* Header */}
         <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 shrink-0 rounded-t-3xl"
           style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}

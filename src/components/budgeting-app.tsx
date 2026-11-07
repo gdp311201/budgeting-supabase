@@ -161,6 +161,16 @@ export default function BudgetingApp({
     document.documentElement.style.setProperty('--blur-card', `${glass.blur_card ?? 1.8}px`)
     document.documentElement.style.setProperty('--blur-input', `${glass.blur_input ?? 8}px`)
 
+    // Sprint 4A Fix: Always update wallpaper CSS variable (even if null → clear)
+    // Previously this was conditional on profile.wallpaper_url being truthy,
+    // which meant NULL wallpaper_url never cleared the default elephant wallpaper.
+    if (profile.wallpaper_url) {
+      document.documentElement.style.setProperty('--theme-wallpaper', `url('${profile.wallpaper_url}')`)
+    } else {
+      // Clear wallpaper — show gradient only (no image)
+      document.documentElement.style.setProperty('--theme-wallpaper', 'none')
+    }
+
     document.body.style.background = `linear-gradient(135deg, var(--gradient-1, #8a96a8), var(--gradient-2, #ba9eb1), var(--gradient-3, #e3b9ca))`
   }, [profile])
 

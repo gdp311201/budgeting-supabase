@@ -17,10 +17,33 @@ export default async function LoginPage({
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-pink-100 via-rose-50 to-purple-100 p-4 overflow-y-auto">
-      <div className="w-full max-w-sm text-center space-y-6 py-8">
-        {/* Icon */}
-        <div className="w-20 h-20 mx-auto mb-2 animate-pulse"><img src="https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png" alt="GDP" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))" }} /></div>
+    <main className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden p-4">
+      {/* Animated wallpaper background (same as main app) */}
+      <div className="wallpaper-bg" aria-hidden="true" />
+      <div className="wallpaper-veil" aria-hidden="true" />
+
+      {/* Spotlight effect */}
+      <div
+        className="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1]"
+        style={{
+          background:
+            'radial-gradient(circle at 50% 30%, rgba(236, 72, 153, 0.08) 0%, transparent 70%)',
+        }}
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 w-full max-w-sm text-center space-y-6 py-8">
+        {/* GDP Logo with floating glow */}
+        <div className="mascot-float-glow">
+          <div className="w-20 h-20 mx-auto">
+            <img
+              src="https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png"
+              alt="GDP"
+              className="w-full h-full object-contain"
+              style={{ filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2))' }}
+            />
+          </div>
+        </div>
 
         {/* Title */}
         <div className="space-y-1">
@@ -35,20 +58,22 @@ export default async function LoginPage({
           </p>
         </div>
 
-        {/* Login card */}
-        <div className="bg-white/60 backdrop-blur-md border border-white/70 rounded-2xl p-6 shadow-xl">
-          <p className="text-xs font-semibold text-pink-900/70 mb-4">
-            🔒 Sign in to access your budgeting dashboard
-          </p>
-          <LoginButton redirectTo={sp.redirect} />
+        {/* Login card — premium glassmorphism with rotating border */}
+        <div className="premium-modal-border animate-pop">
+          <div className="premium-modal-inner bg-white/70 backdrop-blur-xl p-6 shadow-2xl">
+            <p className="text-xs font-semibold text-pink-900/70 mb-4">
+              🔒 Sign in to access your budgeting dashboard
+            </p>
+            <LoginButton redirectTo={sp.redirect} />
 
-          <p className="text-[10px] text-pink-700/50 mt-4 leading-relaxed">
-            By signing in, you agree that your financial data is stored securely
-            and only accessible by you.
-          </p>
+            <p className="text-[10px] text-pink-700/50 mt-4 leading-relaxed">
+              By signing in, you agree that your financial data is stored securely
+              and only accessible by you.
+            </p>
+          </div>
         </div>
 
-        {/* ===== Pricing Preview (Sprint 4B) ===== */}
+        {/* ===== Pricing Preview (toggle) ===== */}
         <details className="bg-white/50 backdrop-blur-md border border-pink-200/60 rounded-2xl overflow-hidden shadow-lg">
           <summary className="cursor-pointer px-4 py-3 flex items-center justify-between hover:bg-pink-50/50 transition">
             <span className="text-sm font-bold text-pink-950">
@@ -72,12 +97,12 @@ export default async function LoginPage({
                 <tr className="border-b-2 border-pink-200">
                   <th className="text-left py-2 px-2 font-bold text-pink-950">Fitur</th>
                   <th className="text-center py-2 px-1 font-bold text-slate-600 bg-slate-50/50 rounded-t-lg">
-                    👤 Basic<br/>
+                    👤 Basic<br />
                     <span className="text-[11px] font-black">Rp 50K</span>
                     <span className="text-[8px] text-slate-500">/tahun</span>
                   </th>
                   <th className="text-center py-2 px-1 font-bold text-pink-700 bg-pink-50 rounded-t-lg">
-                    💎 Premium<br/>
+                    💎 Premium<br />
                     <span className="text-[11px] font-black">Rp 88K</span>
                     <span className="text-[8px] text-pink-500">/tahun</span>
                   </th>
@@ -151,7 +176,7 @@ export default async function LoginPage({
 
             {/* CTA */}
             <a
-              href={`https://wa.me/6281575859792?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20paket%20Budgeting%20App`}
+              href="https://wa.me/6281575859792?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20paket%20Budgeting%20App"
               target="_blank"
               rel="noopener noreferrer"
               className="block w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition shadow-sm"

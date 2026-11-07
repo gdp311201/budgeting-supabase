@@ -357,6 +357,26 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
     }
   }
 
+  // Sprint 9: Restore deleted/suspended user
+  async function handleRestoreUser(email: string) {
+    if (!confirm(`Restore user ${email}?\n\nUser akan dikembalikan ke status Basic dan bisa login lagi.`)) return
+    try {
+      const res = await fetch('/api/admin/whitelist/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
+      alert('✅ User ' + email + ' berhasil di-restore ke Basic tier!')
+      await loadUsers()
+      await loadWhitelist()
+      await loadStats()
+    } catch (err: any) {
+      alert('Error: ' + err.message)
+    }
+  }
+
   // ============================================================
   // Tier management handlers (using modals)
   // ============================================================
@@ -805,6 +825,22 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                             className="text-[11px] bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg font-semibold border border-red-500/30 transition"
                           >
                             🚫 Suspend
+                          </button>
+                        )}
+                        {u.tier === 'deleted' && (
+                          <button
+                            onClick={() => handleRestoreUser(u.email)}
+                            className="text-[11px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-lg font-semibold border border-blue-500/30 transition"
+                          >
+                            🔄 Restore User
+                          </button>
+                        )}
+                        {u.tier === 'suspended' && (
+                          <button
+                            onClick={() => handleRestoreUser(u.email)}
+                            className="text-[11px] bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 px-3 py-1.5 rounded-lg font-semibold border border-blue-500/30 transition"
+                          >
+                            🔄 Restore User
                           </button>
                         )}
                       </div>

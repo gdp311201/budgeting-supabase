@@ -26,6 +26,8 @@ import ExpiryCountdownBanner from '@/components/expiry-countdown-banner'
 import MaintenanceModal from '@/components/maintenance-modal'
 import ReadOnlyOverlay from '@/components/read-only-overlay'
 import AnnouncementModal from '@/components/announcement-modal'
+import CoupleBudgetingModal from '@/components/couple-budgeting-modal'
+import PairingRequestBanner from '@/components/pairing-request-banner'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -95,6 +97,7 @@ export default function BudgetingApp({
   const [showThemePicker, setShowThemePicker] = useState(false)
   const [showSetup, setShowSetup] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
+  const [showCoupleBudgeting, setShowCoupleBudgeting] = useState(false)
 
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
@@ -246,11 +249,12 @@ export default function BudgetingApp({
   }
 
   // ===== Settings Hub handler =====
-  function handleSettingsHubSelect(option: 'account' | 'theme' | 'setup') {
+  function handleSettingsHubSelect(option: 'account' | 'couple' | 'theme' | 'setup') {
     setShowSettingsHub(false)
     // Small delay so hub closes before sub-modal opens
     setTimeout(() => {
       if (option === 'account') setShowAccountSwitcher(true)
+      else if (option === 'couple') setShowCoupleBudgeting(true)
       else if (option === 'theme') setShowThemePicker(true)
       else if (option === 'setup') setShowSetup(true)
     }, 100)
@@ -403,6 +407,11 @@ export default function BudgetingApp({
         </div>
       )}
 
+      {/* ===== Pairing Request Banner (Sprint 10) ===== */}
+      <div className="px-4 mb-2">
+        <PairingRequestBanner onAccept={() => setShowCoupleBudgeting(true)} />
+      </div>
+
       {/* Announcement Modal */}
       <AnnouncementModal />
 
@@ -453,6 +462,7 @@ export default function BudgetingApp({
         onClose={() => setShowSettingsHub(false)}
         onSelect={handleSettingsHubSelect}
         showAccountSwitcher={shareableUsers.length > 0}
+        showCoupleBudgeting={true}
       />
 
       {/* Account Switcher Modal (sub-modal from Settings Hub) */}
@@ -465,6 +475,16 @@ export default function BudgetingApp({
         myNickname={profile?.full_name ?? null}
         onSwitch={(userId) => {
           setActiveUserId(userId)
+          setRefreshKey((k) => k + 1)
+        }}
+      />
+
+      {/* Couple Budgeting Modal (Sprint 10) */}
+      <CoupleBudgetingModal
+        open={showCoupleBudgeting}
+        onClose={() => setShowCoupleBudgeting(false)}
+        onPairingChanged={() => {
+          // Refresh shareable users when pairing status changes
           setRefreshKey((k) => k + 1)
         }}
       />

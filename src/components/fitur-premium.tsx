@@ -7,7 +7,6 @@ interface Props {
   onBack: () => void
 }
 
-// WhatsApp constants (synced with budgeting-app.tsx)
 const WA_NUMBER = '6281575859792'
 const WA_LINK_UPGRADE = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20upgrade%20ke%20Premium%20tier%20Budgeting%20App`
 
@@ -49,13 +48,6 @@ const BENEFITS = [
   },
 ]
 
-/**
- * FiturPremiumPage — Premium tier benefits + pricing + CTA
- *
- * Two modes:
- * 1. Basic/Trial/Expired user → show "Upgrade Premium" CTA
- * 2. Premium/VIP/Admin user → show "Manage Subscription" view (already premium)
- */
 export default function FiturPremiumPage({ onBack }: Props) {
   const { tier, isPremium, isVip, isAdmin, subscriptionInfo } = useTier()
 
@@ -88,68 +80,74 @@ export default function FiturPremiumPage({ onBack }: Props) {
 
       {/* Content */}
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-4 pb-32 relative z-10 space-y-4">
-        {/* Hero pricing card */}
+        {/* Hero pricing card or status card */}
         {!isAlreadyPremium ? (
-          // Show pricing for non-premium users
+          /* Pricing card for non-premium users — wrapped with rotating border */
           <div className="premium-modal-border animate-pop">
-          <div className="premium-modal-inner bg-slate-900 p-6 text-white shadow-xl overflow-hidden relative">
-            {/* Light sweep animation — outer border effect */}
-            <div className="premium-sweep" aria-hidden="true" />
-            <div className="relative z-10 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-pink-100 font-bold mb-1">
-                Premium Tier
-              </p>
-              <div className="flex items-baseline justify-center gap-1 mb-2">
-                <span className="text-4xl font-black tracking-tight">
-                  Rp {PRICING.premium_annual.toLocaleString('id-ID')}
-                </span>
-                <span className="text-sm text-pink-100">/tahun</span>
-              </div>
-              <p className="text-[11px] text-pink-100/90">
-                atau Rp {PRICING.basic_annual.toLocaleString('id-ID')} untuk Basic tier
-              </p>
+            <div className="premium-modal-inner bg-slate-900 p-6 text-white shadow-xl overflow-hidden relative">
+              {/* Light sweep */}
+              <div className="premium-sweep" aria-hidden="true" />
+              <div className="relative z-10 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-pink-100 font-bold mb-1">
+                  Premium Tier
+                </p>
+                <div className="flex items-baseline justify-center gap-1 mb-2">
+                  <span className="text-4xl font-black tracking-tight">
+                    Rp {PRICING.premium_annual.toLocaleString('id-ID')}
+                  </span>
+                  <span className="text-sm text-pink-100">/tahun</span>
+                </div>
+                <p className="text-[11px] text-pink-100/90">
+                  atau Rp {PRICING.basic_annual.toLocaleString('id-ID')} untuk Basic tier
+                </p>
 
-              {/* Trial promo */}
-              <div className="mt-4 bg-white/15 backdrop-blur-sm border border-white/25 rounded-2xl p-3">
-                <p className="text-xs font-bold text-white">
-                  🎁 Bonus Welcome: {PRICING.trial_days} hari FREE TRIAL
-                </p>
-                <p className="text-[10px] text-pink-50/90 mt-1">
-                  Saat signup, Anda otomatis dapat {PRICING.trial_days} hari Premium GRATIS.
-                  Setelah trial, lanjut ke Basic atau upgrade Premium.
-                </p>
+                {/* Trial promo */}
+                <div className="mt-4 bg-white/15 backdrop-blur-sm border border-white/25 rounded-2xl p-3">
+                  <p className="text-xs font-bold text-white">
+                    🎁 Bonus Welcome: {PRICING.trial_days} hari FREE TRIAL
+                  </p>
+                  <p className="text-[10px] text-pink-50/90 mt-1">
+                    Saat signup, Anda otomatis dapat {PRICING.trial_days} hari Premium GRATIS.
+                    Setelah trial, lanjut ke Basic atau upgrade Premium.
+                  </p>
+                </div>
               </div>
+
+              {/* Decorative bling */}
+              <div className="absolute -top-4 -right-4 text-5xl opacity-20">✨</div>
+              <div className="absolute -bottom-4 -left-4 text-5xl opacity-20">💎</div>
             </div>
-            {/* Decorative bling */}
-            <div className="absolute -top-4 -right-4 text-5xl opacity-20">✨</div>
-            <div className="absolute -bottom-4 -left-4 text-5xl opacity-20">💎</div>
           </div>
         ) : (
-          // Show "already premium" status
+          /* Status card for premium users — wrapped with rotating border */
           <div className="premium-modal-border animate-pop">
-          <div className="premium-modal-inner bg-slate-900 p-6 text-center overflow-hidden relative">
-            <div className="premium-sweep" aria-hidden="true" />
-            <div className="text-4xl mb-2">
-              {tier === 'admin' ? '👑' : tier === 'vip' ? '⭐' : '💎'}
+            <div className="premium-modal-inner bg-slate-900 p-6 text-center overflow-hidden relative">
+              <div className="premium-sweep" aria-hidden="true" />
+              <div className="relative z-10">
+                <div className="text-4xl mb-2">
+                  {tier === 'admin' ? '👑' : tier === 'vip' ? '⭐' : '💎'}
+                </div>
+                <p className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold mb-1">
+                  Anda sudah member {tierInfo?.label ?? 'Premium'}!
+                </p>
+                <p className="text-xs text-slate-300 mb-3">
+                  {tier === 'admin'
+                    ? 'Super admin — full access, tidak ada expiry.'
+                    : tier === 'vip'
+                    ? 'VIP member — semua fitur + exclusive mascot, tanpa expiry.'
+                    : subscriptionInfo?.tier_expires_at
+                    ? `Berlaku hingga: ${new Date(subscriptionInfo.tier_expires_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                    : 'Semua fitur Premium aktif untuk Anda.'}
+                </p>
+                {subscriptionInfo?.days_until_expiry !== null &&
+                  subscriptionInfo?.days_until_expiry !== undefined &&
+                  subscriptionInfo.days_until_expiry > 0 && (
+                    <p className="text-[11px] text-emerald-400 font-bold">
+                      {subscriptionInfo.days_until_expiry} hari lagi
+                    </p>
+                  )}
+              </div>
             </div>
-            <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-bold mb-1">
-              Anda sudah member {tierInfo?.label ?? 'Premium'}!
-            </p>
-            <p className="text-xs text-emerald-900/80 mb-3">
-              {tier === 'admin'
-                ? 'Super admin — full access, tidak ada expiry.'
-                : tier === 'vip'
-                ? 'VIP member — semua fitur + exclusive mascot, tanpa expiry.'
-                : subscriptionInfo?.tier_expires_at
-                ? `Berlaku hingga: ${new Date(subscriptionInfo.tier_expires_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}`
-                : 'Semua fitur Premium aktif untuk Anda.'}
-            </p>
-            {subscriptionInfo?.days_until_expiry !== null && subscriptionInfo?.days_until_expiry !== undefined && subscriptionInfo.days_until_expiry > 0 && (
-              <p className="text-[11px] text-emerald-700 font-bold">
-                {subscriptionInfo.days_until_expiry} hari lagi
-              </p>
-            )}
-          </div>
           </div>
         )}
 
@@ -191,50 +189,58 @@ export default function FiturPremiumPage({ onBack }: Props) {
               <thead>
                 <tr className="border-b border-pink-200">
                   <th className="text-left py-2 px-1 font-bold text-pink-700">Fitur</th>
-                  <th className="text-center py-2 px-1 font-bold text-slate-600">Basic</th>
-                  <th className="text-center py-2 px-1 font-bold text-pink-700">Premium</th>
+                  <th className="text-center py-2 px-1 font-bold text-slate-600 bg-slate-50/50 rounded-t-lg">
+                    Basic<br />
+                    <span className="text-[11px] font-black">Rp 50K</span>
+                    <span className="text-[8px] text-slate-500">/tahun</span>
+                  </th>
+                  <th className="text-center py-2 px-1 font-bold text-pink-700 bg-pink-50 rounded-t-lg">
+                    Premium<br />
+                    <span className="text-[11px] font-black">Rp 88K</span>
+                    <span className="text-[8px] text-pink-500">/tahun</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">5 Modul Utama</td>
                   <td className="text-center text-emerald-600">✓</td>
-                  <td className="text-center text-emerald-600">✓</td>
+                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">PIN Lock + Cara Pakai</td>
                   <td className="text-center text-emerald-600">✓</td>
-                  <td className="text-center text-emerald-600">✓</td>
+                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">Tema & Maskot</td>
                   <td className="text-center text-slate-500">2 + 3</td>
-                  <td className="text-center text-pink-700 font-bold">8 + 10</td>
+                  <td className="text-center text-pink-700 font-bold bg-pink-50/50">8 + 10</td>
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">Custom Categories</td>
                   <td className="text-center text-slate-500">Max 5</td>
-                  <td className="text-center text-pink-700 font-bold">∞</td>
+                  <td className="text-center text-pink-700 font-bold bg-pink-50/50">∞</td>
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">Couple Budgeting</td>
                   <td className="text-center text-slate-400">✕</td>
-                  <td className="text-center text-emerald-600">✓</td>
+                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">Export E-Receipt PNG</td>
                   <td className="text-center text-slate-400">✕</td>
-                  <td className="text-center text-emerald-600">✓</td>
+                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">Cloud Backup</td>
                   <td className="text-center text-slate-400">✕</td>
-                  <td className="text-center text-emerald-600">✓</td>
+                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
                 <tr>
                   <td className="py-1.5 px-1 text-pink-900">Priority Support</td>
                   <td className="text-center text-slate-400">✕</td>
-                  <td className="text-center text-emerald-600">✓</td>
+                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
               </tbody>
             </table>
@@ -287,7 +293,7 @@ export default function FiturPremiumPage({ onBack }: Props) {
 
         {/* Footer */}
         <p className="text-[10px] text-pink-800/40 text-center mt-4">
-          Growsphere Digital Product · Made with ❤️
+          Growsphere Digital Product · Crafted by Julyo Sechar
         </p>
       </main>
     </div>

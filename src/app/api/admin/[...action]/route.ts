@@ -8,6 +8,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import {
   adminMasterListUsers,
   adminMasterGetStats,
@@ -32,6 +33,19 @@ import {
   grantMascotAccess,
 } from '@/lib/api/whitelist'
 import type { Tier } from '@/lib/constants/tiers'
+
+// ============================================================
+// Helper: create service-role client (bypass RLS for admin queries)
+// ============================================================
+function createServiceClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    { auth: { persistSession: false } }
+  )
+}
 
 // ============================================================
 // Helper: safe JSON response (never throw to client)
@@ -283,50 +297,53 @@ export async function POST(
       case 'whitelist/deactivate': {
         if (!body.email) return jsonError('email diperlukan', 400)
         await removeFromWhitelist(body.email)
-        // Sprint 8: Also set tier='suspended' so user can't access app
-        const { data: profile } = await supabase
+        // Sprint 8: Use service-role client (bypass RLS) to find profile by email
+        const serviceClient = createServiceClient()
+        const { data: deactivateProfile } = await serviceClient
           .from('profiles')
           .select('id')
           .ilike('email', body.email)
           .single()
-        if (profile) {
-          await adminMasterSetUserTier(userId, profile.id, 'suspended', null, 'Deactivated from whitelist')
+        if (deactivateProfile) {
+          await adminMasterSetUserTier(userId, deactivateProfile.id, 'suspended', null, 'Deactivated from whitelist')
         }
         return jsonSuccess({})
       }
       case 'whitelist/reactivate': {
         if (!body.email) return jsonError('email diperlukan', 400)
         await reactivateInWhitelist(body.email)
-        // Sprint 8: Also restore tier='basic' so user can access app again
-        const { data: profile } = await supabase
+        // Sprint 8: Use service-role client to find profile
+        const reactivateClient = createServiceClient()
+        const { data: reactivateProfile } = await reactivateClient
           .from('profiles')
           .select('id, tier')
           .ilike('email', body.email)
           .single()
-        if (profile && profile.tier === 'suspended') {
-          await adminMasterSetUserTier(userId, profile.id, 'basic', null, 'Reactivated from whitelist')
+        if (reactivateProfile && reactivateProfile.tier === 'suspended') {
+          await adminMasterSetUserTier(userId, reactivateProfile.id, 'basic', null, 'Reactivated from whitelist')
         }
         return jsonSuccess({})
       }
       case 'whitelist/delete': {
         if (!body.email) return jsonError('email diperlukan', 400)
         await deleteFromWhitelist(body.email)
-        // Sprint 8: Delete all user data + set tier='deleted'
-        const { data: profile } = await supabase
+        // Sprint 8: Use service-role client to find + delete user data
+        const deleteClient = createServiceClient()
+        const { data: deleteProfile } = await deleteClient
           .from('profiles')
           .select('id')
           .ilike('email', body.email)
           .single()
-        if (profile) {
+        if (deleteProfile) {
           // Delete all user data (order matters for FK constraints)
-          await supabase.from('transactions').delete().eq('user_id', profile.id)
-          await supabase.from('budgets').delete().eq('user_id', profile.id)
-          await supabase.from('subcategories').delete().eq('user_id', profile.id)
-          await supabase.from('categories').delete().eq('user_id', profile.id)
-          await supabase.from('accounts').delete().eq('user_id', profile.id)
-          await supabase.from('shared_access').delete().or(`owner_user_id.eq.${profile.id},shared_with_user_id.eq.${profile.id}`)
+          await deleteClient.from('transactions').delete().eq('user_id', deleteProfile.id)
+          await deleteClient.from('budgets').delete().eq('user_id', deleteProfile.id)
+          await deleteClient.from('subcategories').delete().eq('user_id', deleteProfile.id)
+          await deleteClient.from('categories').delete().eq('user_id', deleteProfile.id)
+          await deleteClient.from('accounts').delete().eq('user_id', deleteProfile.id)
+          await deleteClient.from('shared_access').delete().or(`owner_user_id.eq.${deleteProfile.id},shared_with_user_id.eq.${deleteProfile.id}`)
           // Set tier='deleted' (keep profile row for admin panel visibility)
-          await adminMasterSetUserTier(userId, profile.id, 'deleted', null, 'Deleted by admin — all data removed')
+          await adminMasterSetUserTier(userId, deleteProfile.id, 'deleted', null, 'Deleted by admin — all data removed')
         }
         return jsonSuccess({})
       }

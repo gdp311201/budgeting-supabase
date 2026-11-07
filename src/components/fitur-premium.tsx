@@ -96,7 +96,9 @@ export default function FiturPremiumPage({ onBack }: Props) {
         {/* Hero pricing card */}
         {!isAlreadyPremium ? (
           // Show pricing for non-premium users
-          <div className="relative overflow-hidden bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 rounded-3xl p-6 text-white shadow-xl border border-white/30">
+          <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-6 text-white shadow-xl border border-slate-700 premium-sweep-wrapper">
+            {/* Light sweep animation — outer border effect */}
+            <div className="premium-sweep" aria-hidden="true" />
             <div className="relative z-10 text-center">
               <p className="text-[10px] uppercase tracking-wider text-pink-100 font-bold mb-1">
                 Premium Tier
@@ -128,7 +130,8 @@ export default function FiturPremiumPage({ onBack }: Props) {
           </div>
         ) : (
           // Show "already premium" status
-          <div className="bg-gradient-to-br from-emerald-500/15 to-teal-500/15 border-2 border-emerald-400/40 rounded-3xl p-6 text-center">
+          <div className="relative overflow-hidden bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 text-center premium-sweep-wrapper">
+            <div className="premium-sweep" aria-hidden="true" />
             <div className="text-4xl mb-2">
               {tier === 'admin' ? '👑' : tier === 'vip' ? '⭐' : '💎'}
             </div>

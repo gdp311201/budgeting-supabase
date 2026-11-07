@@ -45,11 +45,12 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
     }
   }
 
-  // Auto-load when refreshKey or targetUserId changes (Batch 4)
+  // Sprint 4A: Clear data when account switches (user must click button to reload)
   useEffect(() => {
-    loadDashboard()
+    setData(null)
+    setError(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey, targetUserId])
+  }, [targetUserId, refreshKey])
 
   return (
     <div className="space-y-4">
@@ -96,7 +97,7 @@ export default function DashboardView({ user, mascotEmoji, mascotIconUrl, nickna
 
       {/* Asset Card */}
       {data && (
-        <div className="relative overflow-hidden bg-gradient-to-br from-pink-500/90 via-rose-500/90 to-pink-600/90 rounded-3xl p-5 text-white shadow-lg border border-white/30">
+        <div className="relative overflow-hidden rounded-3xl p-5 text-white shadow-lg border border-white/30" style={{ background: "linear-gradient(135deg, var(--theme-primary, #ec4899), var(--theme-accent, #f43f5e))" }}>
           <div className="relative z-10">
             <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-pink-50 bg-white/15 border border-white/25 backdrop-blur-sm px-2.5 py-1 rounded-full">Total Aset Bersih</span>
             <div className="text-3xl font-black tracking-tight mt-2 drop-shadow">{formatRupiah(data.totalAset)}</div>

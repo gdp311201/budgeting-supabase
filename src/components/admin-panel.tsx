@@ -469,6 +469,27 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   }
 
   // ============================================================
+  // Sprint 8: Filter + sort for search bars
+  // ============================================================
+  const filteredUsers = users
+    .filter(u => {
+      if (!userSearch) return true
+      const q = userSearch.toLowerCase()
+      return u.email.toLowerCase().includes(q) || (u.full_name?.toLowerCase().includes(q) ?? false)
+    })
+    .sort((a, b) => {
+      if (a.tier === 'deleted' && b.tier !== 'deleted') return 1
+      if (a.tier !== 'deleted' && b.tier === 'deleted') return -1
+      return 0
+    })
+
+  const filteredWhitelist = whitelist.filter(entry => {
+    if (!whitelistSearch) return true
+    const q = whitelistSearch.toLowerCase()
+    return entry.email.toLowerCase().includes(q) || (entry.notes?.toLowerCase().includes(q) ?? false)
+  })
+
+  // ============================================================
   // Render
   // ============================================================
   return (

@@ -35,7 +35,7 @@ import {
 import type { Tier } from '@/lib/constants/tiers'
 
 // ============================================================
-// Helper: create service-role client (bypass RLS for admin queries)
+// Helper: safe JSON response (never throw to client)
 // ============================================================
 function createServiceClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -47,9 +47,6 @@ function createServiceClient() {
   )
 }
 
-// ============================================================
-// Helper: safe JSON response (never throw to client)
-// ============================================================
 function jsonError(message: string, status: number = 500) {
   return NextResponse.json({ status: 'error', error: message }, { status })
 }
@@ -181,9 +178,7 @@ export async function POST(
   if (error) return error
   if (!userId) return jsonError('Unauthorized', 401)
 
-  // Sprint 8: Create supabase client for direct DB queries (deactivate, delete, etc.)
   const supabase = await createClient()
-
   let action: string
   let body: any
   try {
@@ -297,53 +292,39 @@ export async function POST(
       case 'whitelist/deactivate': {
         if (!body.email) return jsonError('email diperlukan', 400)
         await removeFromWhitelist(body.email)
-        // Sprint 8: Use service-role client (bypass RLS) to find profile by email
-        const serviceClient = createServiceClient()
-        const { data: deactivateProfile } = await serviceClient
-          .from('profiles')
-          .select('id')
-          .ilike('email', body.email)
-          .single()
-        if (deactivateProfile) {
-          await adminMasterSetUserTier(userId, deactivateProfile.id, 'suspended', null, 'Deactivated from whitelist')
+        const svcClient1 = createServiceClient()
+        const { data: dProfile } = await svcClient1
+          .from('profiles').select('id').ilike('email', body.email).single()
+        if (dProfile) {
+          await adminMasterSetUserTier(userId, dProfile.id, 'suspended', null, 'Deactivated from whitelist')
         }
         return jsonSuccess({})
       }
       case 'whitelist/reactivate': {
         if (!body.email) return jsonError('email diperlukan', 400)
         await reactivateInWhitelist(body.email)
-        // Sprint 8: Use service-role client to find profile
-        const reactivateClient = createServiceClient()
-        const { data: reactivateProfile } = await reactivateClient
-          .from('profiles')
-          .select('id, tier')
-          .ilike('email', body.email)
-          .single()
-        if (reactivateProfile && reactivateProfile.tier === 'suspended') {
-          await adminMasterSetUserTier(userId, reactivateProfile.id, 'basic', null, 'Reactivated from whitelist')
+        const svcClient2 = createServiceClient()
+        const { data: rProfile } = await svcClient2
+          .from('profiles').select('id, tier').ilike('email', body.email).single()
+        if (rProfile && rProfile.tier === 'suspended') {
+          await adminMasterSetUserTier(userId, rProfile.id, 'basic', null, 'Reactivated from whitelist')
         }
         return jsonSuccess({})
       }
       case 'whitelist/delete': {
         if (!body.email) return jsonError('email diperlukan', 400)
         await deleteFromWhitelist(body.email)
-        // Sprint 8: Use service-role client to find + delete user data
-        const deleteClient = createServiceClient()
-        const { data: deleteProfile } = await deleteClient
-          .from('profiles')
-          .select('id')
-          .ilike('email', body.email)
-          .single()
-        if (deleteProfile) {
-          // Delete all user data (order matters for FK constraints)
-          await deleteClient.from('transactions').delete().eq('user_id', deleteProfile.id)
-          await deleteClient.from('budgets').delete().eq('user_id', deleteProfile.id)
-          await deleteClient.from('subcategories').delete().eq('user_id', deleteProfile.id)
-          await deleteClient.from('categories').delete().eq('user_id', deleteProfile.id)
-          await deleteClient.from('accounts').delete().eq('user_id', deleteProfile.id)
-          await deleteClient.from('shared_access').delete().or(`owner_user_id.eq.${deleteProfile.id},shared_with_user_id.eq.${deleteProfile.id}`)
-          // Set tier='deleted' (keep profile row for admin panel visibility)
-          await adminMasterSetUserTier(userId, deleteProfile.id, 'deleted', null, 'Deleted by admin — all data removed')
+        const svcClient3 = createServiceClient()
+        const { data: delProfile } = await svcClient3
+          .from('profiles').select('id').ilike('email', body.email).single()
+        if (delProfile) {
+          await svcClient3.from('transactions').delete().eq('user_id', delProfile.id)
+          await svcClient3.from('budgets').delete().eq('user_id', delProfile.id)
+          await svcClient3.from('subcategories').delete().eq('user_id', delProfile.id)
+          await svcClient3.from('categories').delete().eq('user_id', delProfile.id)
+          await svcClient3.from('accounts').delete().eq('user_id', delProfile.id)
+          await svcClient3.from('shared_access').delete().or(`owner_user_id.eq.${delProfile.id},shared_with_user_id.eq.${delProfile.id}`)
+          await adminMasterSetUserTier(userId, delProfile.id, 'deleted', null, 'Deleted by admin — all data removed')
         }
         return jsonSuccess({})
       }

@@ -167,6 +167,9 @@ export async function POST(
   if (error) return error
   if (!userId) return jsonError('Unauthorized', 401)
 
+  // Sprint 8: Create supabase client for direct DB queries (deactivate, delete, etc.)
+  const supabase = await createClient()
+
   let action: string
   let body: any
   try {

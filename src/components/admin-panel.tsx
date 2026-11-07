@@ -472,7 +472,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Top header */}
-      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800" style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 12px)" }}>
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg">

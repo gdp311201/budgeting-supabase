@@ -33,11 +33,6 @@ const BENEFITS = [
     desc: 'Download e-receipt bulanan sebagai PNG — siap di-share atau disimpan',
   },
   {
-    icon: '🖼️',
-    title: 'Custom Wallpaper',
-    desc: 'Upload wallpaper personal Anda sendiri untuk pengalaman yang lebih personal',
-  },
-  {
     icon: '☁️',
     title: 'Cloud Backup & Restore',
     desc: 'Data aman tersimpan di cloud — bisa restore kapan saja di perangkat baru',
@@ -74,7 +69,7 @@ export default function FiturPremiumPage({ onBack }: Props) {
 
       {/* Header */}
       <header
-        className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-pink-200/50 px-4 py-3 flex items-center gap-3"
+        className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-pink-200/50 px-4 py-3 flex items-center gap-3"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
       >
         <button
@@ -225,11 +220,6 @@ export default function FiturPremiumPage({ onBack }: Props) {
                 </tr>
                 <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-1 text-pink-900">Export E-Receipt PNG</td>
-                  <td className="text-center text-slate-400">✕</td>
-                  <td className="text-center text-emerald-600">✓</td>
-                </tr>
-                <tr className="border-b border-pink-100">
-                  <td className="py-1.5 px-1 text-pink-900">Custom Wallpaper</td>
                   <td className="text-center text-slate-400">✕</td>
                   <td className="text-center text-emerald-600">✓</td>
                 </tr>

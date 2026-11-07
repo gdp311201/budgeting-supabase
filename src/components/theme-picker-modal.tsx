@@ -290,7 +290,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="premium-modal-border w-full max-w-md animate-pop">
-      <div className="bg-white/80 backdrop-blur-xl rounded-[calc(1.5rem-2px)] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="premium-modal-inner bg-white/90 backdrop-blur-xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         {/* Header */}
         <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500 shrink-0 rounded-t-3xl">
           <div>

@@ -695,7 +695,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
 
               {/* User cards */}
               <div className="grid gap-3">
-                {!usersLoading && !usersError && users.map((u) => {
+                {!usersLoading && !usersError && filteredUsers.map((u) => {
                   const info = TIER_INFO[u.tier]
                   return (
                     <div

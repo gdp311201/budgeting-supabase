@@ -109,7 +109,8 @@ const SECTIONS = [
     title: 'Setup Budget',
     desc: 'Atur akun bank, kategori & budget bulanan Anda',
     items: [
-      'Klik tombol ⚙️ (gear) di pojok kanan atas dashboard',
+      'Klik tombol ⚙️ di pojok kanan atas dashboard',
+      'Pilih menu "💰 Setup Budget" dari Settings Hub',
       'Rekap Alokasi: lihat total budget per kategori + sisa budget',
       'Akun Bank: tambah/hapus bank (pilih dari 22 bank options)',
       'Kategori: tambah kategori custom, expand untuk lihat sub-kategori',
@@ -124,7 +125,8 @@ const SECTIONS = [
     title: 'Personalisasi',
     desc: 'Pilih tema warna & maskot favorit Anda',
     items: [
-      'Klik tombol 🎨 di header',
+      'Klik tombol ⚙️ di pojok kanan atas dashboard',
+      'Pilih menu "🎨 Theme Picker" dari Settings Hub',
       'Tab "Tema Warna": pilih dari tema Free / Premium / VIP',
       'Tab "Maskot": pilih maskot (emoji) yang Anda suka',
       'Warna app berubah INSTANTLY saat dipilih',
@@ -140,8 +142,9 @@ const SECTIONS = [
     desc: 'Share data budgeting dengan pasangan Anda',
     items: [
       'Fitur eksklusif Premium tier — Couple Budgeting',
-      'Klik tombol 👤 di header pill (sebelah "My Budgeting")',
-      'Pilih akun pasangan Anda dari dropdown',
+      'Klik tombol ⚙️ di pojok kanan atas dashboard',
+      'Pilih menu "👤 Account Switcher" dari Settings Hub',
+      'Pilih akun pasangan Anda dari modal popup',
       'Saat switch ke akun pasangan: Anda bisa input, edit & hapus transaksi mereka',
       'Banner indikator "📊 Viewing shared data" muncul saat mode shared',
       'Switch balik ke "My Budget" kapan saja untuk kembali ke data Anda',

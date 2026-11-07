@@ -7,9 +7,11 @@ import { cn } from '@/lib/utils/format'
 interface Props {
   open: boolean
   onClose: () => void
-  onSelect: (option: 'account' | 'theme' | 'setup') => void
-  /** Hide Account Switcher option if no shareable users (basic tier) */
+  onSelect: (option: 'account' | 'couple' | 'theme' | 'setup') => void
+  /** Hide Account Switcher option if no shareable users */
   showAccountSwitcher: boolean
+  /** Show Couple Budgeting option for premium+ users */
+  showCoupleBudgeting: boolean
 }
 
 const MENU_OPTIONS = [
@@ -18,6 +20,12 @@ const MENU_OPTIONS = [
     icon: '👤',
     title: 'Account Switcher',
     desc: 'Switch ke akun pasangan (Couple Budgeting)',
+  },
+  {
+    key: 'couple' as const,
+    icon: '💑',
+    title: 'Couple Budgeting',
+    desc: 'Setup pairing dengan pasangan Anda',
   },
   {
     key: 'theme' as const,
@@ -34,19 +42,16 @@ const MENU_OPTIONS = [
 ]
 
 /**
- * SettingsHubModal — Center popup with 3 settings menu options
+ * SettingsHubModal — Center popup with settings menu options
  *
- * Sprint 3A Consolidation:
- * - Replaces 3 floating buttons (👤 switcher, 🎨 theme, ⚙️ setup)
- * - Single ⚙️ gear button opens this hub
- * - User selects option → hub closes → corresponding sub-modal opens
- * - Rendered via createPortal to bypass backdrop-filter containing block
+ * Sprint 10: Added Couple Budgeting option for premium+ users
  */
 export default function SettingsHubModal({
   open,
   onClose,
   onSelect,
   showAccountSwitcher,
+  showCoupleBudgeting,
 }: Props) {
   const [mounted, setMounted] = useState(false)
 
@@ -56,10 +61,12 @@ export default function SettingsHubModal({
 
   if (!open || !mounted || typeof document === 'undefined') return null
 
-  // Filter menu options based on showAccountSwitcher flag
-  const visibleOptions = MENU_OPTIONS.filter(
-    (opt) => opt.key !== 'account' || showAccountSwitcher
-  )
+  // Filter menu options based on props
+  const visibleOptions = MENU_OPTIONS.filter((opt) => {
+    if (opt.key === 'account' && !showAccountSwitcher) return false
+    if (opt.key === 'couple' && !showCoupleBudgeting) return false
+    return true
+  })
 
   return createPortal(
     <div
@@ -70,55 +77,55 @@ export default function SettingsHubModal({
         className="premium-modal-border w-full max-w-xs animate-pop"
         onClick={(e) => e.stopPropagation()}
       >
-      <div className="premium-modal-inner bg-white/90 backdrop-blur-xl p-5 text-center shadow-2xl">
-        {/* Big icon at top */}
-        <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-pink-100 border border-pink-200">
-          ⚙️
+        <div className="premium-modal-inner bg-white/80 backdrop-blur-xl p-5 text-center shadow-2xl">
+          {/* Big icon at top */}
+          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-pink-100 border border-pink-200">
+            ⚙️
+          </div>
+
+          {/* Title */}
+          <h3 className="text-sm font-bold text-pink-950 mb-1">Settings</h3>
+          <p className="text-[11px] text-pink-700/70 mb-4">
+            Pilih menu pengaturan
+          </p>
+
+          {/* Menu options */}
+          <div className="space-y-2 mb-4">
+            {visibleOptions.map((option) => (
+              <button
+                key={option.key}
+                onClick={() => {
+                  onSelect(option.key)
+                }}
+                className={cn(
+                  'w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-3 border',
+                  'bg-white/70 border-pink-200 hover:bg-pink-50 hover:border-pink-300'
+                )}
+              >
+                <span className="text-xl shrink-0">{option.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-pink-950 truncate">
+                    {option.title}
+                  </p>
+                  <p className="text-[10px] text-pink-700/60 truncate">
+                    {option.desc}
+                  </p>
+                </div>
+                <span className="text-pink-400 text-sm shrink-0">→</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Tutup button */}
+          <button
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-sm transition"
+          >
+            Tutup
+          </button>
         </div>
-
-        {/* Title */}
-        <h3 className="text-sm font-bold text-pink-950 mb-1">Settings</h3>
-        <p className="text-[11px] text-pink-700/70 mb-4">
-          Pilih menu pengaturan
-        </p>
-
-        {/* Menu options */}
-        <div className="space-y-2 mb-4">
-          {visibleOptions.map((option) => (
-            <button
-              key={option.key}
-              onClick={() => {
-                onSelect(option.key)
-              }}
-              className={cn(
-                'w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-3 border',
-                'bg-white/70 border-pink-200 hover:bg-pink-50 hover:border-pink-300'
-              )}
-            >
-              <span className="text-xl shrink-0">{option.icon}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-pink-950 truncate">
-                  {option.title}
-                </p>
-                <p className="text-[10px] text-pink-700/60 truncate">
-                  {option.desc}
-                </p>
-              </div>
-              <span className="text-pink-400 text-sm shrink-0">→</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Tutup button */}
-        <button
-          onClick={onClose}
-          className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-sm transition"
-        >
-          Tutup
-        </button>
       </div>
-    </div>
-      </div>,
+    </div>,
     document.body
   )
 }

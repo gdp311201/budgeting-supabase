@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type { ShareableUser } from '@/lib/api/subscription'
 import { cn } from '@/lib/utils/format'
 
@@ -19,15 +20,10 @@ interface Props {
 /**
  * AccountSwitcher — circular icon button in header pill
  *
- * Sprint 3A Redesign + Fix:
- * - Small circular icon button (24x24px) inside header pill
- * - Click → CENTER POPUP MODAL (style seperti DeleteConfirmModal)
- *   - Big icon di atas
- *   - Title
- *   - Account list card
- *   - Tutup button di bawah
- * - Backdrop blur, click outside to close
- * - Hidden entirely if no shareable users (basic tier users see nothing)
+ * IMPORTANT FIX: Modal di-render via createPortal ke document.body
+ * supaya position:fixed tidak terpengaruh oleh backdrop-filter di parent
+ * (header pill pakai backdrop-blur-md yang bikin fixed positioning jadi
+ * relatif ke parent, bukan viewport).
  */
 export default function AccountSwitcher({
   activeUserId,
@@ -37,6 +33,11 @@ export default function AccountSwitcher({
   onSwitch,
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // If no shareable users (user is basic tier, or no partner shared), don't render
   if (shareableUsers.length === 0) {
@@ -63,8 +64,8 @@ export default function AccountSwitcher({
         {currentIcon}
       </button>
 
-      {/* ===== CENTER POPUP MODAL (style mirip DeleteConfirmModal) ===== */}
-      {open && (
+      {/* ===== CENTER POPUP MODAL — rendered via Portal to document.body ===== */}
+      {open && mounted && typeof document !== 'undefined' && createPortal(
         <div
           className="fixed inset-0 z-[85] flex items-center justify-center p-4 bg-pink-950/40 backdrop-blur-[5px]"
           onClick={() => setOpen(false)}
@@ -73,7 +74,7 @@ export default function AccountSwitcher({
             className="bg-white/95 w-full max-w-xs rounded-3xl p-5 text-center shadow-2xl animate-pop"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Big icon at top — seperti DeleteConfirmModal style */}
+            {/* Big icon at top */}
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl flex items-center justify-center text-3xl shadow-inner bg-pink-100 border border-pink-200">
               {isMyBudget ? '👤' : '📊'}
             </div>
@@ -150,7 +151,8 @@ export default function AccountSwitcher({
               Tutup
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

@@ -139,7 +139,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
 
     // Free user clicking premium → show upgrade CTA modal
     if (theme.is_premium && !isPremium) {
-      setUpgradeFeatureName(f'Tema {theme.name}')
+      setUpgradeFeatureName(`Tema ${theme.name}`)
       setShowUpgradeModal(true)
       return
     }
@@ -169,7 +169,7 @@ export default function ThemePickerModal({ open, onClose, onApply }: Props) {
   async function handleSelectMascot(mascot: any) {
     // Free user clicking premium mascot → show upgrade CTA modal
     if (mascot.is_premium && !isPremium && !mascot.is_restricted) {
-      setUpgradeFeatureName(f'Maskot {mascot.name}')
+      setUpgradeFeatureName(`Maskot ${mascot.name}`)
       setShowUpgradeModal(true)
       return
     }

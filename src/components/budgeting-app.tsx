@@ -16,6 +16,7 @@ import OnboardingModal from '@/components/onboarding-modal'
 import PinLockScreen from '@/components/pin-lock-screen'
 import WelcomePage from '@/components/welcome-page'
 import CaraPakai from '@/components/cara-pakai'
+import FiturPremiumPage from '@/components/fitur-premium'
 import FeedbackModal from '@/components/feedback-modal'
 import AccountSwitcher from '@/components/account-switcher'
 import { getShareableUsers, type ShareableUser } from '@/lib/api/subscription'
@@ -54,12 +55,13 @@ const MASCOT_EMOJIS: Record<string, string> = {
 
 const PIN_STORAGE_KEY = 'bms_pin_hash'
 
-// WhatsApp number — Sprint 2A update
+// WhatsApp number
 const WA_NUMBER = '6281575859792'
 const WA_LINK_DEFAULT = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20tanya%20tentang%20Budgeting%20App`
 const WA_LINK_FEEDBACK = `https://wa.me/${WA_NUMBER}?text=Halo%20Julyo%2C%20saya%20mau%20kasih%20feedback%20tentang%20Budgeting%20App`
 
-type AppState = 'pin-setup' | 'pin-lock' | 'welcome' | 'dashboard' | 'cara-pakai' | 'setting'
+// Sprint 3A: added 'fitur-premium' state
+type AppState = 'pin-setup' | 'pin-lock' | 'welcome' | 'dashboard' | 'cara-pakai' | 'fitur-premium' | 'setting'
 
 export default function BudgetingApp({
   user,
@@ -73,16 +75,16 @@ export default function BudgetingApp({
   const [refreshKey, setRefreshKey] = useState(0)
 
   // ===== Shared access state (Batch 3) =====
-  const [activeUserId, setActiveUserId] = useState<string | null>(null) // null = my own data
+  const [activeUserId, setActiveUserId] = useState<string | null>(null)
   const [shareableUsers, setShareableUsers] = useState<ShareableUser[]>([])
   const [sharedAccessError, setSharedAccessError] = useState<string | null>(null)
 
-  // Onboarding check (no full_name = need onboarding)
+  // Onboarding check
   const [showOnboarding, setShowOnboarding] = useState(
     () => !initialProfile?.full_name
   )
 
-  // App state flow: PIN → Welcome → Dashboard/CaraPakai/Setting
+  // App state flow: PIN → Welcome → Dashboard/CaraPakai/FiturPremium/Setting
   const [appState, setAppState] = useState<AppState>(() => {
     if (typeof window === 'undefined') return 'welcome'
     const pinHash = localStorage.getItem(PIN_STORAGE_KEY)
@@ -106,7 +108,6 @@ export default function BudgetingApp({
   }, [refreshKey, user.id])
 
   // ===== Fetch shareable users (Batch 3) =====
-  // Only fetch when user reaches main app (post PIN unlock)
   useEffect(() => {
     if (appState !== 'dashboard' && appState !== 'welcome') return
     let cancelled = false
@@ -117,7 +118,6 @@ export default function BudgetingApp({
         if (!cancelled) setShareableUsers(users)
       } catch (err: any) {
         if (!cancelled) {
-          // Graceful fallback — if not premium, just no shareable users
           if (!err.message?.includes('Premium tier required')) {
             console.warn('Failed to load shareable users:', err.message)
             setSharedAccessError(err.message)
@@ -159,24 +159,20 @@ export default function BudgetingApp({
     document.documentElement.style.setProperty('--blur-card', `${glass.blur_card ?? 1.8}px`)
     document.documentElement.style.setProperty('--blur-input', `${glass.blur_input ?? 8}px`)
 
-    // Set body background gradient
     document.body.style.background = `linear-gradient(135deg, var(--gradient-1, #8a96a8), var(--gradient-2, #ba9eb1), var(--gradient-3, #e3b9ca))`
   }, [profile])
 
   // Dynamic favicon + apple-touch-icon + manifest (per user)
   // Sprint 1 Fix: Elephant favicon is EXCLUSIVE to Elsa only.
-  // All other users (including Julyo/admin) get GDP logo.
   useEffect(() => {
     const ELEPHANT_ICON = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/mascots/elephant/icon.png'
     const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
 
-    // Only Elsa gets elephant favicon — hardcoded by email
     const ELEPHANT_FAVICON_EMAILS = ['elsakristya19@gmail.com']
     const isElephantFaviconUser = ELEPHANT_FAVICON_EMAILS.includes(user.email ?? '')
     const iconUrl = isElephantFaviconUser ? ELEPHANT_ICON : GDP_LOGO
     const appName = profile?.app_name ?? 'Budgeting Master Sync'
 
-    // Update favicon (browser tab)
     let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement
     if (!favicon) {
       favicon = document.createElement('link')
@@ -185,7 +181,6 @@ export default function BudgetingApp({
     }
     favicon.href = iconUrl
 
-    // Update apple-touch-icon (iOS home screen)
     let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement
     if (!appleIcon) {
       appleIcon = document.createElement('link')
@@ -194,7 +189,6 @@ export default function BudgetingApp({
     }
     appleIcon.href = iconUrl
 
-    // Dynamic manifest (Android PWA home screen)
     const manifest = {
       name: appName,
       short_name: 'Budgeting',
@@ -239,7 +233,6 @@ export default function BudgetingApp({
   const [showSetup, setShowSetup] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
 
-  // Handle onboarding completion
   function handleOnboardingComplete(updatedProfile: Profile) {
     setProfile(updatedProfile)
     setShowOnboarding(false)
@@ -274,7 +267,6 @@ export default function BudgetingApp({
           nickname={profile?.full_name}
           onNavigate={(view) => setAppState(view as AppState)}
         />
-        {/* Floating buttons on welcome page */}
         <button
           onClick={() => setShowThemePicker(true)}
           className="fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white/70 backdrop-blur-md border border-pink-200/60 shadow-lg flex items-center justify-center hover:scale-110 transition"
@@ -308,7 +300,12 @@ export default function BudgetingApp({
     return <CaraPakai onBack={() => setAppState('welcome')} />
   }
 
-  // ===== SETTING (direct from welcome page) =====
+  // ===== FITUR PREMIUM PAGE (Sprint 3A NEW) =====
+  if (appState === 'fitur-premium') {
+    return <FiturPremiumPage onBack={() => setAppState('welcome')} />
+  }
+
+  // ===== SETTING (direct from welcome page, if needed) =====
   if (appState === 'setting') {
     return (
       <SetupView user={user} onClose={() => setAppState('welcome')} />
@@ -336,6 +333,17 @@ export default function BudgetingApp({
           <span className="text-xs font-semibold text-pink-950/80 tracking-wide">
             {profile?.app_name ?? 'Budgeting Master Sync'}
           </span>
+          {/* ===== Account Switcher (Sprint 3A) — positioned INSIDE header pill ===== */}
+          <AccountSwitcher
+            activeUserId={activeUserId}
+            shareableUsers={shareableUsers}
+            myEmail={user.email ?? ''}
+            myNickname={profile?.full_name ?? null}
+            onSwitch={(userId) => {
+              setActiveUserId(userId)
+              setRefreshKey((k) => k + 1)
+            }}
+          />
           <button
             onClick={() => setShowThemePicker(true)}
             className="ml-1 w-6 h-6 rounded-full bg-gradient-to-br from-pink-400 to-rose-400 text-white text-xs font-bold flex items-center justify-center hover:scale-110 transition shadow-sm"
@@ -370,27 +378,6 @@ export default function BudgetingApp({
         💡
       </button>
 
-      {/* ===== Account Switcher (Batch 3) — positioned top-right, below setting ===== */}
-      <div
-        className="fixed z-40"
-        style={{
-          top: 'max(env(safe-area-inset-top, 0px), 16px)',
-          right: '60px',  // offset from Setting button on the right
-        }}
-      >
-        <AccountSwitcher
-          activeUserId={activeUserId}
-          shareableUsers={shareableUsers}
-          myEmail={user.email ?? ''}
-          myNickname={profile?.full_name ?? null}
-          onSwitch={(userId) => {
-            setActiveUserId(userId)
-            // Force refresh all data by bumping refreshKey
-            setRefreshKey((k) => k + 1)
-          }}
-        />
-      </div>
-
       {/* Floating WhatsApp button */}
       <a
         href={WA_LINK_DEFAULT}
@@ -423,7 +410,7 @@ export default function BudgetingApp({
         </div>
       )}
 
-      {/* ===== Announcement Modal (Sprint 2B) — full-page popup for admin announcements ===== */}
+      {/* ===== Announcement Modal (Sprint 2B) ===== */}
       <AnnouncementModal />
 
       {/* ===== Trial Countdown Banner (Batch 5) ===== */}
@@ -500,10 +487,10 @@ export default function BudgetingApp({
         waLink={WA_LINK_FEEDBACK}
       />
 
-      {/* ===== Maintenance Modal (Batch 5) — blocks app when admin enables it ===== */}
+      {/* ===== Maintenance Modal (Batch 5) ===== */}
       <MaintenanceModal />
 
-      {/* ===== Read-Only Overlay (Batch 5) — blocks app when tier=expired/suspended ===== */}
+      {/* ===== Read-Only Overlay (Batch 5) ===== */}
       <ReadOnlyOverlay />
     </div>
   )

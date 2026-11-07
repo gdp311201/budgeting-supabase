@@ -2,10 +2,8 @@
 
 interface Props {
   nickname: string | null
-  onNavigate: (view: 'dashboard' | 'cara-pakai') => void
+  onNavigate: (view: 'dashboard' | 'cara-pakai' | 'fitur-premium') => void
 }
-
-const GDP_LOGO = 'https://qxarqpbwbsxlbectwgba.supabase.co/storage/v1/object/public/logo/GDP_logo.png'
 
 export default function WelcomePage({ nickname, onNavigate }: Props) {
   return (
@@ -15,22 +13,21 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
       <div className="wallpaper-veil" aria-hidden="true" />
 
       <div className="relative z-10 w-full max-w-sm text-center space-y-6">
-        {/* GDP Logo + Subtitle */}
+        {/* Greeting */}
         <div>
-          <div className="w-[60px] h-[60px] mx-auto mb-2">
-            <img
-              src={GDP_LOGO}
-              alt="GDP"
-              className="w-full h-full object-contain"
-              style={{ filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))' }}
-            />
-          </div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-black">
-            Personal Budgeting
+          <div className="text-5xl mb-2 animate-pulse">🐘</div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-pink-700/70">
+            Selamat Datang
+          </p>
+          <h1 className="text-2xl font-bold text-pink-950 mt-1">
+            Hi, {nickname ?? 'Anda'}! 👋
+          </h1>
+          <p className="text-xs text-pink-800/60 mt-2">
+            Mau mulai apa hari ini?
           </p>
         </div>
 
-        {/* 2 Menu Buttons */}
+        {/* 3 Menu Buttons */}
         <div className="space-y-3">
           {/* Dashboard */}
           <button
@@ -40,7 +37,7 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
             <span className="text-2xl">📊</span>
             <div className="text-left flex-1">
               <p className="text-sm font-bold">Dashboard</p>
-              <p className="text-[10px] text-white/80">Lihat ringkasan keuanganmu</p>
+              <p className="text-[10px] text-white/80">Lihat ringkasan keuangan Anda</p>
             </div>
             <span className="text-white/60">→</span>
           </button>
@@ -57,17 +54,31 @@ export default function WelcomePage({ nickname, onNavigate }: Props) {
             </div>
             <span className="text-pink-400">→</span>
           </button>
+
+          {/* Fitur Premium (NEW) */}
+          <button
+            onClick={() => onNavigate('fitur-premium')}
+            className="w-full bg-gradient-to-r from-amber-300 to-yellow-400 hover:from-amber-400 hover:to-yellow-500 text-amber-950 font-bold py-4 px-6 rounded-2xl shadow-lg border border-amber-200/60 transition hover:scale-[1.02] flex items-center gap-3 relative overflow-hidden"
+          >
+            <span className="text-2xl">💎</span>
+            <div className="text-left flex-1">
+              <p className="text-sm font-bold">Fitur Premium</p>
+              <p className="text-[10px] text-amber-900/70">
+                Unlock semua fitur + Couple Budgeting
+              </p>
+            </div>
+            <span className="text-amber-700">→</span>
+            {/* Decorative shimmer */}
+            <span className="absolute top-0 right-0 text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-bl-lg font-bold">
+              PRO
+            </span>
+          </button>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-[11px] font-bold text-pink-800/60">
-            Growsphere Digital Product
-          </p>
-          <p className="text-[10px] text-pink-700/50 mt-0.5">
-            by : Julyo Sechar
-          </p>
-        </div>
+        <p className="text-[10px] text-pink-800/40 mt-8">
+          Growsphere Digital Product · Made with ❤️
+        </p>
       </div>
     </div>
   )

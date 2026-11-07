@@ -184,9 +184,9 @@ export default function CaraPakai({ onBack }: Props) {
       <div className="wallpaper-bg" aria-hidden="true" />
       <div className="wallpaper-veil" aria-hidden="true" />
 
-      {/* Header */}
+      {/* Header — z-30 supaya sticky di atas konten saat scroll */}
       <header
-        className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-pink-200/50 px-4 py-3 flex items-center gap-3"
+        className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-pink-200/50 px-4 py-3 flex items-center gap-3"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
       >
         <button

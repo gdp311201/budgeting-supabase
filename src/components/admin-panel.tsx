@@ -124,7 +124,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   // Whitelist state
   const [whitelist, setWhitelist] = useState<AllowedEmail[]>([])
   const [whitelistLoading, setWhitelistLoading] = useState(true)
-  const [whitelistSearch, setWhitelistSearch] = useState('')  // Sprint 8: search filter
+  const [whitelistSearch, setWhitelistSearch] = useState('')
   const [whitelistError, setWhitelistError] = useState<string | null>(null)
 
   // Form state for whitelist (removed Nama Lengkap)
@@ -138,7 +138,7 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
   // Users state
   const [users, setUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
-  const [userSearch, setUserSearch] = useState('')  // Sprint 8: search filter
+  const [userSearch, setUserSearch] = useState('')
   const [usersError, setUsersError] = useState<string | null>(null)
 
   // Stats state
@@ -470,7 +470,19 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
 
   // ============================================================
   // Sprint 8: Filter + sort for search bars
+  // Sort priority: Admin > VIP > Premium > Basic > Trial > Expired > Suspended > Deleted
   // ============================================================
+  const TIER_SORT_ORDER: Record<string, number> = {
+    'admin': 1,
+    'vip': 2,
+    'premium': 3,
+    'basic': 4,
+    'trial': 5,
+    'expired': 6,
+    'suspended': 7,
+    'deleted': 8,
+  }
+
   const filteredUsers = users
     .filter(u => {
       if (!userSearch) return true
@@ -478,9 +490,10 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
       return u.email.toLowerCase().includes(q) || (u.full_name?.toLowerCase().includes(q) ?? false)
     })
     .sort((a, b) => {
-      if (a.tier === 'deleted' && b.tier !== 'deleted') return 1
-      if (a.tier !== 'deleted' && b.tier === 'deleted') return -1
-      return 0
+      const aOrder = TIER_SORT_ORDER[a.tier] ?? 99
+      const bOrder = TIER_SORT_ORDER[b.tier] ?? 99
+      if (aOrder !== bOrder) return aOrder - bOrder
+      return a.email.localeCompare(b.email)
     })
 
   const filteredWhitelist = whitelist.filter(entry => {
@@ -650,22 +663,24 @@ export default function AdminPanel({ adminEmail, adminName }: Props) {
                 <div>
                   <h2 className="text-lg font-bold text-slate-100">Manajemen Pengguna</h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    {filteredUsers.length} dari {users.length} pengguna terdaftar
+                    {filteredUsers.length} dari {users.length} pengguna
                   </p>
                 </div>
-                <button
-                  onClick={loadUsers}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/50 transition"
-                >
-                  ↻ Refresh
-                </button>
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="🔍 Cari email atau nama..."
-                  className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none w-48"
-                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={loadUsers}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/50 transition"
+                  >
+                    ↻ Refresh
+                  </button>
+                  <input
+                    type="text"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="🔍 Cari email atau nama..."
+                    className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none w-48"
+                  />
+                </div>
               </div>
 
               {usersLoading && (

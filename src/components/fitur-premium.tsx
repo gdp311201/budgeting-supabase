@@ -91,7 +91,8 @@ export default function FiturPremiumPage({ onBack }: Props) {
         {/* Hero pricing card */}
         {!isAlreadyPremium ? (
           // Show pricing for non-premium users
-          <div className="relative overflow-hidden bg-slate-900 rounded-3xl p-6 text-white shadow-xl border border-slate-700 premium-sweep-wrapper">
+          <div className="premium-modal-border animate-pop">
+          <div className="premium-modal-inner bg-slate-900 p-6 text-white shadow-xl overflow-hidden relative">
             {/* Light sweep animation — outer border effect */}
             <div className="premium-sweep" aria-hidden="true" />
             <div className="relative z-10 text-center">
@@ -125,7 +126,8 @@ export default function FiturPremiumPage({ onBack }: Props) {
           </div>
         ) : (
           // Show "already premium" status
-          <div className="relative overflow-hidden bg-slate-900 border-2 border-slate-700 rounded-3xl p-6 text-center premium-sweep-wrapper">
+          <div className="premium-modal-border animate-pop">
+          <div className="premium-modal-inner bg-slate-900 p-6 text-center overflow-hidden relative">
             <div className="premium-sweep" aria-hidden="true" />
             <div className="text-4xl mb-2">
               {tier === 'admin' ? '👑' : tier === 'vip' ? '⭐' : '💎'}
@@ -147,6 +149,7 @@ export default function FiturPremiumPage({ onBack }: Props) {
                 {subscriptionInfo.days_until_expiry} hari lagi
               </p>
             )}
+          </div>
           </div>
         )}
 

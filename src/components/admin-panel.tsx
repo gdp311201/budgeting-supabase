@@ -1,14 +1,24 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import {
+  listWhitelist,
+  addToWhitelist,
+  removeFromWhitelist,
+  reactivateInWhitelist,
+  deleteFromWhitelist,
+  grantMascotAccess,
+} from '@/lib/api/whitelist'
 import type { Database } from '@/lib/types/database'
 import { cn } from '@/lib/utils/format'
 import { TIER_INFO, type Tier } from '@/lib/constants/tiers'
+import ChangeTierModal from '@/components/change-tier-modal'
+import SuspendUserModal from '@/components/suspend-user-modal'
 
 type AllowedEmail = Database['public']['Tables']['allowed_emails']['Row']
 
 // ============================================================
-// Types — admin user from API
+// Types
 // ============================================================
 interface AdminUser {
   user_id: string
@@ -60,11 +70,15 @@ interface AnnouncementConfig {
   expires_at: string | null
 }
 
-type TabKey = 'stats' | 'users' | 'allowlist' | 'maintenance' | 'announcement'
+type TabKey = 'stats' | 'users' | 'allowlist' | 'maintenance' | 'banner'
 
 interface Props {
-  onClose: () => void
+  adminEmail: string
+  adminName: string
 }
+
+// WhatsApp constants
+const WA_NUMBER = '6281575859792'
 
 // ============================================================
 // Helper formatters
@@ -81,31 +95,46 @@ function formatExpiry(isoTimestamp: string | null): string {
 function formatDays(days: number | null): string {
   if (days === null) return '∞'
   if (days < 0) return `${Math.abs(days)}d ago`
-  if (days === 0) return 'Today!'
+  if (days === 0) return 'Today'
   return `${days}d`
+}
+
+function formatLastSeen(isoTimestamp: string | null): string {
+  if (!isoTimestamp) return 'Never'
+  const date = new Date(isoTimestamp)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffDays > 30) {
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+  }
+  if (diffDays > 0) return `${diffDays}d ago`
+  if (diffHours > 0) return `${diffHours}h ago`
+  return 'Just now'
 }
 
 // ============================================================
 // Main component
 // ============================================================
-export default function AdminPanel({ onClose }: Props) {
+export default function AdminPanel({ adminEmail, adminName }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('stats')
 
-  // Whitelist state (existing feature)
+  // Whitelist state
   const [whitelist, setWhitelist] = useState<AllowedEmail[]>([])
   const [whitelistLoading, setWhitelistLoading] = useState(true)
   const [whitelistError, setWhitelistError] = useState<string | null>(null)
 
-  // Form state for whitelist
+  // Form state for whitelist (removed Nama Lengkap)
   const [newEmail, setNewEmail] = useState('')
-  const [newName, setNewName] = useState('')
   const [newPremium, setNewPremium] = useState(false)
   const [newTheme, setNewTheme] = useState('')
   const [newMascot, setNewMascot] = useState('')
   const [newNotes, setNewNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Users state (new feature)
+  // Users state
   const [users, setUsers] = useState<AdminUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
   const [usersError, setUsersError] = useState<string | null>(null)
@@ -133,6 +162,10 @@ export default function AdminPanel({ onClose }: Props) {
     dismissible: true,
   })
   const [announcementSaving, setAnnouncementSaving] = useState(false)
+
+  // Modal states
+  const [changeTierUser, setChangeTierUser] = useState<AdminUser | null>(null)
+  const [suspendUser, setSuspendUser] = useState<AdminUser | null>(null)
 
   // ============================================================
   // Loaders
@@ -216,9 +249,6 @@ export default function AdminPanel({ onClose }: Props) {
     }
   }, [])
 
-  // ============================================================
-  // Initial load
-  // ============================================================
   useEffect(() => {
     loadWhitelist()
     loadUsers()
@@ -228,7 +258,7 @@ export default function AdminPanel({ onClose }: Props) {
   }, [loadWhitelist, loadUsers, loadStats, loadMaintenance, loadAnnouncement])
 
   // ============================================================
-  // Whitelist handlers (existing, preserved)
+  // Whitelist handlers (removed Nama Lengkap field)
   // ============================================================
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -241,7 +271,6 @@ export default function AdminPanel({ onClose }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: newEmail,
-          full_name: newName,
           is_premium: newPremium,
           assigned_theme: newTheme || undefined,
           assigned_mascot: newMascot || undefined,
@@ -251,7 +280,6 @@ export default function AdminPanel({ onClose }: Props) {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to add email')
       setNewEmail('')
-      setNewName('')
       setNewPremium(false)
       setNewTheme('')
       setNewMascot('')
@@ -328,36 +356,54 @@ export default function AdminPanel({ onClose }: Props) {
   }
 
   // ============================================================
-  // Tier management handlers (new)
+  // Tier management handlers (using modals)
   // ============================================================
-  async function handleChangeTier(userId: string, email: string) {
-    const tier = prompt(
-      `Set tier untuk ${email}:\n\nOptions: admin, vip, premium, basic, trial, expired, suspended\n(Enter tier name):`,
-      'premium'
-    )
-    if (!tier) return
-
-    const daysInput = prompt(
-      `Subscription duration in days? (Enter number, or leave empty for no expiry)\n- 365 = 1 year\n- 30 = 1 month\n- empty = no expiry (admin/vip only)`,
-      '365'
-    )
-    const days = daysInput && daysInput.trim() !== '' ? parseInt(daysInput, 10) : null
-
-    const note = prompt(`Admin note (optional):`, 'Manual change via admin panel')
-
+  async function handleChangeTierConfirm(
+    tier: Tier,
+    days: number | null,
+    note: string | null
+  ) {
+    if (!changeTierUser) return
     try {
       const res = await fetch('/api/admin/users/tier', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, tier, days, note }),
+        body: JSON.stringify({
+          userId: changeTierUser.user_id,
+          tier,
+          days,
+          note,
+        }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Failed to change tier')
-      alert(`✅ Tier updated!\n${email} → ${tier}\nExpiry: ${json.tier_expires_at ?? 'Never'}`)
+      alert(`✅ Tier updated!\n${changeTierUser.email} → ${tier}`)
       await loadUsers()
       await loadStats()
     } catch (err: any) {
-      alert('❌ Error: ' + err.message)
+      throw new Error(err.message ?? 'Failed to change tier')
+    }
+  }
+
+  async function handleSuspendConfirm(reason: string, customNote: string) {
+    if (!suspendUser) return
+    const fullReason = reason === 'Other' && customNote ? customNote : reason
+    try {
+      const res = await fetch('/api/admin/users/suspend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: suspendUser.user_id,
+          reason: fullReason,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to suspend')
+      alert(`✅ ${suspendUser.email} suspended.\nReason: ${fullReason}`)
+      await loadUsers()
+      await loadStats()
+    } catch (err: any) {
+      throw new Error(err.message ?? 'Failed to suspend user')
     }
   }
 
@@ -379,28 +425,8 @@ export default function AdminPanel({ onClose }: Props) {
     }
   }
 
-  async function handleSuspend(userId: string, email: string) {
-    const reason = prompt(`Suspend ${email}? Reason:`)
-    if (!reason) return
-    if (!confirm(`Confirm SUSPEND ${email}? User cannot login.`)) return
-    try {
-      const res = await fetch('/api/admin/users/suspend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, reason }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Failed to suspend')
-      alert(`✅ ${email} suspended.`)
-      await loadUsers()
-      await loadStats()
-    } catch (err: any) {
-      alert('❌ Error: ' + err.message)
-    }
-  }
-
   // ============================================================
-  // Maintenance handlers
+  // Maintenance & Announcement handlers
   // ============================================================
   async function handleSaveMaintenance() {
     setMaintenanceSaving(true)
@@ -421,9 +447,6 @@ export default function AdminPanel({ onClose }: Props) {
     }
   }
 
-  // ============================================================
-  // Announcement handlers
-  // ============================================================
   async function handleSaveAnnouncement() {
     setAnnouncementSaving(true)
     try {
@@ -447,126 +470,140 @@ export default function AdminPanel({ onClose }: Props) {
   // Render
   // ============================================================
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-pink-950/40 backdrop-blur-[5px]">
-      <div className="bg-white/95 w-full max-w-2xl rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[92vh]">
-        {/* Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-pink-200/60 flex items-center justify-between bg-gradient-to-r from-pink-500 to-rose-500">
-          <div>
-            <h3 className="text-base font-bold text-white tracking-wide drop-shadow">
-              ⚙️ Admin Panel
-            </h3>
-            <p className="text-[11px] text-white/90 font-semibold mt-0.5">
-              GDP Budgeting — User & Subscription Management
-            </p>
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Top header */}
+      <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800">
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-lg">
+              ⚙️
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-100">GDP Admin Panel</h1>
+              <p className="text-[10px] text-slate-400">
+                {adminName} · {adminEmail}
+              </p>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/25 border border-white/40 text-white font-bold flex items-center justify-center"
+          <a
+            href="/"
+            className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/50"
           >
-            ✕
-          </button>
+            ← Kembali ke App
+          </a>
         </div>
+      </header>
 
-        {/* Tab navigation */}
-        <div className="flex border-b border-pink-200/60 bg-white/50 overflow-x-auto">
-          {([
-            { key: 'stats', label: '📊 Stats', short: '📊' },
-            { key: 'users', label: '👥 Users', short: '👥' },
-            { key: 'allowlist', label: '✉️ Whitelist', short: '✉️' },
-            { key: 'maintenance', label: '🔧 Maintenance', short: '🔧' },
-            { key: 'announcement', label: '📢 Banner', short: '📢' },
-          ] as const).map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                'px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition',
-                activeTab === tab.key
-                  ? 'text-pink-700 border-b-2 border-pink-500 bg-white'
-                  : 'text-pink-700/60 hover:text-pink-700 hover:bg-pink-50/50'
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-col md:flex-row max-w-7xl mx-auto">
+        {/* Sidebar (desktop) / Top tabs (mobile) */}
+        <aside className="md:w-56 md:min-h-[calc(100vh-65px)] md:border-r border-slate-800 md:sticky md:top-[65px]">
+          <nav className="flex md:flex-col gap-1 p-3 overflow-x-auto md:overflow-visible">
+            {([
+              { key: 'stats', label: 'Statistik', icon: '📊', short: '📊' },
+              { key: 'users', label: 'Pengguna', icon: '👥', short: '👥' },
+              { key: 'allowlist', label: 'Whitelist', icon: '✉️', short: '✉️' },
+              { key: 'maintenance', label: 'Maintenance', icon: '🔧', short: '🔧' },
+              { key: 'banner', label: 'Pengumuman', icon: '📢', short: '📢' },
+            ] as const).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition',
+                  activeTab === tab.key
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                )}
+              >
+                <span className="text-base">{tab.icon}</span>
+                <span className="hidden md:inline">{tab.label}</span>
+                <span className="md:hidden">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-        {/* Body */}
-        <div className="overflow-y-auto px-4 py-4 flex-1">
+        {/* Main content */}
+        <main className="flex-1 p-4 md:p-6">
           {/* ============================================================ */}
           {/* TAB: Stats                                                   */}
           {/* ============================================================ */}
           {activeTab === 'stats' && (
-            <section className="space-y-4">
-              <h4 className="text-xs font-bold text-pink-950 uppercase tracking-wider">
-                📊 Statistics Overview
-              </h4>
+            <section className="space-y-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Statistik Overview</h2>
+                <p className="text-xs text-slate-400 mt-1">Ringkasan pengguna & konversi subscription</p>
+              </div>
 
               {statsLoading ? (
-                <p className="text-xs text-pink-700/60 text-center py-4">Loading stats...</p>
+                <p className="text-sm text-slate-400 text-center py-8">Loading stats...</p>
               ) : stats ? (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gradient-to-br from-pink-50 to-rose-50 border border-pink-200 rounded-xl p-3">
-                      <p className="text-[10px] uppercase text-pink-700 font-bold">Total Users</p>
-                      <p className="text-2xl font-bold text-pink-900 mt-1">{stats.total_users}</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-3">
-                      <p className="text-[10px] uppercase text-emerald-700 font-bold">Premium+</p>
-                      <p className="text-2xl font-bold text-emerald-900 mt-1">
-                        {stats.premium_users}
-                      </p>
-                      <p className="text-[9px] text-emerald-600 mt-0.5">
-                        {stats.premium_conversion_rate}% conversion
-                      </p>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-50 to-sky-50 border border-blue-200 rounded-xl p-3">
-                      <p className="text-[10px] uppercase text-blue-700 font-bold">Trial Active</p>
-                      <p className="text-2xl font-bold text-blue-900 mt-1">{stats.trial_active}</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-3">
-                      <p className="text-[10px] uppercase text-amber-700 font-bold">
-                        Trial Expired
-                      </p>
-                      <p className="text-2xl font-bold text-amber-900 mt-1">{stats.trial_expired}</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl p-3">
-                      <p className="text-[10px] uppercase text-red-700 font-bold">
-                        Expired (Read-Only)
-                      </p>
-                      <p className="text-2xl font-bold text-red-900 mt-1">{stats.expired_users}</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-200 rounded-xl p-3">
-                      <p className="text-[10px] uppercase text-purple-700 font-bold">
-                        Recent Signups (7d)
-                      </p>
-                      <p className="text-2xl font-bold text-purple-900 mt-1">
-                        {stats.recent_signups_7d}
-                      </p>
-                    </div>
+                  {/* KPI cards grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <KpiCard
+                      label="Total Users"
+                      value={stats.total_users}
+                      icon="👥"
+                      color="from-cyan-500/20 to-blue-500/20 border-cyan-500/30"
+                      textColor="text-cyan-300"
+                    />
+                    <KpiCard
+                      label="Premium+"
+                      value={stats.premium_users}
+                      subtitle={`${stats.premium_conversion_rate}% conversion`}
+                      icon="💎"
+                      color="from-emerald-500/20 to-teal-500/20 border-emerald-500/30"
+                      textColor="text-emerald-300"
+                    />
+                    <KpiCard
+                      label="Trial Active"
+                      value={stats.trial_active}
+                      icon="🎁"
+                      color="from-blue-500/20 to-sky-500/20 border-blue-500/30"
+                      textColor="text-blue-300"
+                    />
+                    <KpiCard
+                      label="Trial Expired"
+                      value={stats.trial_expired}
+                      icon="⏰"
+                      color="from-amber-500/20 to-yellow-500/20 border-amber-500/30"
+                      textColor="text-amber-300"
+                    />
+                    <KpiCard
+                      label="Expired (Read-Only)"
+                      value={stats.expired_users}
+                      icon="⚠️"
+                      color="from-red-500/20 to-rose-500/20 border-red-500/30"
+                      textColor="text-red-300"
+                    />
+                    <KpiCard
+                      label="Recent Signups (7d)"
+                      value={stats.recent_signups_7d}
+                      icon="📈"
+                      color="from-purple-500/20 to-fuchsia-500/20 border-purple-500/30"
+                      textColor="text-purple-300"
+                    />
                   </div>
 
-                  <div>
-                    <h5 className="text-xs font-bold text-pink-950 mt-4 mb-2">
-                      Users by Tier
-                    </h5>
-                    <div className="space-y-1.5">
+                  {/* By tier breakdown */}
+                  <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                      Pengguna per Tier
+                    </h3>
+                    <div className="space-y-2">
                       {Object.entries(stats.by_tier ?? {}).map(([tier, count]) => {
                         const info = TIER_INFO[tier as Tier]
                         if (!info) return null
                         return (
                           <div
                             key={tier}
-                            className={cn(
-                              'flex items-center justify-between px-3 py-2 rounded-lg border',
-                              info.color,
-                              info.borderColor
-                            )}
+                            className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700"
                           >
-                            <span className={cn('text-xs font-bold', info.textColor)}>
+                            <span className="text-sm font-semibold text-slate-200">
                               {info.label}
                             </span>
-                            <span className={cn('text-xs font-bold', info.textColor)}>
+                            <span className="text-sm font-bold text-slate-100">
                               {count as number} user{(count as number) !== 1 ? 's' : ''}
                             </span>
                           </div>
@@ -576,40 +613,44 @@ export default function AdminPanel({ onClose }: Props) {
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-pink-700/60 text-center py-4">
-                  Failed to load stats
-                </p>
+                <p className="text-sm text-slate-400 text-center py-4">Failed to load stats</p>
               )}
             </section>
           )}
 
           {/* ============================================================ */}
-          {/* TAB: Users                                                    */}
+          {/* TAB: Users                                                   */}
           {/* ============================================================ */}
           {activeTab === 'users' && (
-            <section className="space-y-3">
+            <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-pink-950 uppercase tracking-wider">
-                  👥 User Management ({users.length})
-                </h4>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-100">Manajemen Pengguna</h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {users.length} pengguna terdaftar
+                  </p>
+                </div>
                 <button
                   onClick={loadUsers}
-                  className="text-[10px] text-pink-700 hover:text-pink-900 font-semibold underline"
+                  className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700 hover:border-cyan-500/50 transition"
                 >
                   ↻ Refresh
                 </button>
               </div>
 
               {usersLoading && (
-                <p className="text-xs text-pink-700/60 text-center py-8">Loading users...</p>
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mb-3" />
+                  <p className="text-sm text-slate-400">Loading users...</p>
+                </div>
               )}
 
               {usersError && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-300">
                   ❌ {usersError}
                   <button
                     onClick={loadUsers}
-                    className="mt-1 block text-rose-900 font-bold underline"
+                    className="mt-1 block text-red-200 font-bold underline"
                   >
                     Coba lagi
                   </button>
@@ -617,296 +658,286 @@ export default function AdminPanel({ onClose }: Props) {
               )}
 
               {!usersLoading && !usersError && users.length === 0 && (
-                <p className="text-xs text-pink-700/60 italic text-center py-4">
+                <p className="text-sm text-slate-400 italic text-center py-8">
                   No users found
                 </p>
               )}
 
-              {!usersLoading && !usersError && users.map((u) => {
-                const info = TIER_INFO[u.tier]
-                return (
-                  <div
-                    key={u.user_id}
-                    className={cn(
-                      'p-3 rounded-xl border-2',
-                      info.color,
-                      info.borderColor
-                    )}
-                  >
-                    {/* Header: email + tier badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-bold text-pink-950 truncate">
-                            {u.email}
-                          </span>
-                          <span
-                            className={cn(
-                              'text-[9px] px-1.5 py-0.5 rounded-full font-bold',
-                              info.color,
-                              info.textColor
-                            )}
-                          >
-                            {info.label}
-                          </span>
-                          {u.is_admin && (
-                            <span className="text-[9px] bg-purple-200 text-purple-900 px-1.5 py-0.5 rounded-full font-bold">
-                              👑 ADMIN
+              {/* User cards */}
+              <div className="grid gap-3">
+                {!usersLoading && !usersError && users.map((u) => {
+                  const info = TIER_INFO[u.tier]
+                  return (
+                    <div
+                      key={u.user_id}
+                      className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition"
+                    >
+                      {/* Header: email + tier badge */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-bold text-slate-100 truncate">
+                              {u.email}
                             </span>
+                            <span
+                              className={cn(
+                                'text-[10px] px-2 py-0.5 rounded-full font-bold border',
+                                info.color,
+                                info.textColor,
+                                info.borderColor
+                              )}
+                            >
+                              {info.label}
+                            </span>
+                            {u.is_admin && (
+                              <span className="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold border border-purple-500/30">
+                                👑 ADMIN
+                              </span>
+                            )}
+                          </div>
+                          {u.full_name && (
+                            <p className="text-xs text-slate-400 mt-1">{u.full_name}</p>
                           )}
                         </div>
-                        {u.full_name && (
-                          <p className="text-[10px] text-pink-700/70 mt-0.5">{u.full_name}</p>
+                      </div>
+
+                      {/* Subscription info */}
+                      <div className="grid grid-cols-4 gap-2 text-xs mb-3">
+                        <div>
+                          <p className="text-[9px] text-slate-500 uppercase font-bold">Expiry</p>
+                          <p className="text-slate-200 font-bold">{formatExpiry(u.tier_expires_at)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-slate-500 uppercase font-bold">Days Left</p>
+                          <p className="text-slate-200 font-bold">{formatDays(u.days_until_expiry)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-slate-500 uppercase font-bold">Tx Count</p>
+                          <p className="text-slate-200 font-bold">{u.transaction_count}</p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] text-slate-500 uppercase font-bold">Last Seen</p>
+                          <p className="text-slate-200 font-bold">{formatLastSeen(u.last_sign_in_at)}</p>
+                        </div>
+                      </div>
+
+                      {/* Trial info */}
+                      {u.tier === 'trial' && u.trial_days_remaining !== null && (
+                        <p className="text-xs text-blue-300 font-semibold mb-2">
+                          🎁 Trial: {u.trial_days_remaining} day(s) remaining
+                        </p>
+                      )}
+
+                      {/* Subscription note */}
+                      {u.subscription_note && (
+                        <p className="text-[11px] text-slate-400 italic mb-3 bg-slate-800/50 rounded-lg px-2 py-1">
+                          📝 {u.subscription_note}
+                        </p>
+                      )}
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => setChangeTierUser(u)}
+                          className="text-[11px] bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 px-3 py-1.5 rounded-lg font-semibold border border-cyan-500/30 transition"
+                        >
+                          🔄 Change Tier
+                        </button>
+                        <button
+                          onClick={() => handleUpgradePremium(u.user_id, u.email)}
+                          disabled={u.tier === 'premium' || u.tier === 'vip' || u.is_admin}
+                          className="text-[11px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-lg font-semibold border border-emerald-500/30 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          ⭐ Upgrade Premium
+                        </button>
+                        {u.tier !== 'suspended' && !u.is_admin && (
+                          <button
+                            onClick={() => setSuspendUser(u)}
+                            className="text-[11px] bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-1.5 rounded-lg font-semibold border border-red-500/30 transition"
+                          >
+                            🚫 Suspend
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    {/* Subscription info */}
-                    <div className="grid grid-cols-3 gap-1.5 mt-2 text-[10px]">
-                      <div>
-                        <p className="text-pink-700/60 uppercase font-semibold">Expiry</p>
-                        <p className="text-pink-950 font-bold">
-                          {formatExpiry(u.tier_expires_at)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-pink-700/60 uppercase font-semibold">Days Left</p>
-                        <p className="text-pink-950 font-bold">
-                          {formatDays(u.days_until_expiry)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-pink-700/60 uppercase font-semibold">Tx Count</p>
-                        <p className="text-pink-950 font-bold">{u.transaction_count}</p>
-                      </div>
-                    </div>
-
-                    {/* Trial info */}
-                    {u.tier === 'trial' && u.trial_days_remaining !== null && (
-                      <p className="text-[10px] text-blue-700 font-semibold mt-1">
-                        🎁 Trial: {u.trial_days_remaining} day(s) remaining
-                      </p>
-                    )}
-
-                    {/* Subscription note */}
-                    {u.subscription_note && (
-                      <p className="text-[10px] text-pink-700/60 italic mt-1">
-                        📝 {u.subscription_note}
-                      </p>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex gap-1.5 mt-2 flex-wrap">
-                      <button
-                        onClick={() => handleChangeTier(u.user_id, u.email)}
-                        className="text-[9px] bg-pink-100 hover:bg-pink-200 text-pink-900 px-2 py-1 rounded font-semibold"
-                      >
-                        🔄 Change Tier
-                      </button>
-                      <button
-                        onClick={() => handleUpgradePremium(u.user_id, u.email)}
-                        disabled={u.tier === 'premium' || u.tier === 'vip' || u.is_admin}
-                        className="text-[9px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 px-2 py-1 rounded font-semibold disabled:opacity-40"
-                      >
-                        ⭐ Upgrade Premium
-                      </button>
-                      {u.tier !== 'suspended' ? (
-                        <button
-                          onClick={() => handleSuspend(u.user_id, u.email)}
-                          className="text-[9px] bg-red-100 hover:bg-red-200 text-red-900 px-2 py-1 rounded font-semibold"
-                        >
-                          🚫 Suspend
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </section>
           )}
 
           {/* ============================================================ */}
-          {/* TAB: Allowlist (existing, preserved)                        */}
+          {/* TAB: Whitelist                                              */}
           {/* ============================================================ */}
           {activeTab === 'allowlist' && (
-            <section className="space-y-3">
-              <h4 className="text-xs font-bold text-pink-950 uppercase tracking-wider">
-                ✉️ Email Whitelist ({whitelist.length})
-              </h4>
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Email Whitelist</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  {whitelist.length} email terdaftar · Kontrol siapa yang bisa register
+                </p>
+              </div>
 
               {whitelistLoading && (
-                <p className="text-center text-xs text-pink-800/60 py-8">Memuat whitelist...</p>
+                <p className="text-sm text-slate-400 text-center py-8">Loading whitelist...</p>
               )}
 
               {whitelistError && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-300">
                   ❌ {whitelistError}
                   <button
                     onClick={loadWhitelist}
-                    className="mt-1 block text-rose-900 font-bold underline"
+                    className="mt-1 block text-red-200 font-bold underline"
                   >
                     Coba lagi
                   </button>
                 </div>
               )}
 
-              {/* Add new whitelist form */}
-              <form onSubmit={handleAdd} className="space-y-2 bg-pink-50/50 p-3 rounded-xl">
-                <p className="text-xs font-bold text-pink-950 uppercase tracking-wider">
-                  ➕ Tambah Email
-                </p>
-                <div className="grid grid-cols-2 gap-2">
+              {/* Add new whitelist form (removed Nama Lengkap) */}
+              <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                  ➕ Tambah Email ke Whitelist
+                </h3>
+                <form onSubmit={handleAdd} className="space-y-3">
                   <input
                     type="email"
                     placeholder="email@gmail.com *"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     required
-                    className="bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={newTheme}
+                      onChange={(e) => setNewTheme(e.target.value)}
+                      className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-cyan-500 focus:outline-none"
+                    >
+                      <option value="">Auto-assign tema</option>
+                      <option value="forest-sage">🌿 Forest Sage</option>
+                      <option value="moon-lavender">🌙 Moon Lavender</option>
+                      <option value="rose-gold-luxe">🌸 Rose Gold Luxe ⭐</option>
+                      <option value="cherry-blossom">🍒 Cherry Blossom ⭐</option>
+                      <option value="lavender-dream">💜 Lavender Dream ⭐</option>
+                      <option value="sunset-coral">🌅 Sunset Coral ⭐</option>
+                      <option value="pearl-blush">🤍 Pearl Blush ⭐</option>
+                    </select>
+                    <select
+                      value={newMascot}
+                      onChange={(e) => setNewMascot(e.target.value)}
+                      className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-cyan-500 focus:outline-none"
+                    >
+                      <option value="">Auto-assign maskot</option>
+                      <option value="cat">🐱 Cat</option>
+                      <option value="butterfly">🦋 Butterfly</option>
+                      <option value="rabbit">🐰 Rabbit</option>
+                      <option value="fox">🦊 Fox</option>
+                      <option value="panda">🐼 Panda</option>
+                      <option value="owl">🦉 Owl</option>
+                      <option value="unicorn">🦄 Unicorn ⭐</option>
+                      <option value="bear">🐻 Bear ⭐</option>
+                      <option value="dog">🐶 Dog ⭐</option>
+                    </select>
+                  </div>
                   <input
                     type="text"
-                    placeholder="Nama lengkap"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
+                    placeholder="Catatan (mis. 'Customer VIP - bayar 250K')"
+                    value={newNotes}
+                    onChange={(e) => setNewNotes(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={newTheme}
-                    onChange={(e) => setNewTheme(e.target.value)}
-                    className="bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
+                  <label className="flex items-center gap-2 text-sm text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={newPremium}
+                      onChange={(e) => setNewPremium(e.target.checked)}
+                      className="w-4 h-4 accent-cyan-500"
+                    />
+                    Premium user (akses tema & maskot premium)
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:opacity-60 text-white font-bold py-2.5 px-3 rounded-xl text-sm transition"
                   >
-                    <option value="">Auto-assign tema</option>
-                    <option value="elephant-pink">🐘 Elephant Pink</option>
-                    <option value="forest-sage">🌿 Forest Sage</option>
-                    <option value="moon-lavender">🌙 Moon Lavender</option>
-                    <option value="rose-gold-luxe">🌸 Rose Gold Luxe ⭐</option>
-                    <option value="cherry-blossom">🍒 Cherry Blossom ⭐</option>
-                    <option value="lavender-dream">💜 Lavender Dream ⭐</option>
-                    <option value="sunset-coral">🌅 Sunset Coral ⭐</option>
-                    <option value="pearl-blush">🤍 Pearl Blush ⭐</option>
-                  </select>
-                  <select
-                    value={newMascot}
-                    onChange={(e) => setNewMascot(e.target.value)}
-                    className="bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
-                  >
-                    <option value="">Auto-assign maskot</option>
-                    <option value="cat">🐱 Cat</option>
-                    <option value="butterfly">🦋 Butterfly</option>
-                    <option value="rabbit">🐰 Rabbit</option>
-                    <option value="fox">🦊 Fox</option>
-                    <option value="panda">🐼 Panda</option>
-                    <option value="moon">🌙 Moon</option>
-                    <option value="unicorn">🦄 Unicorn ⭐</option>
-                    <option value="sakura">🌸 Sakura ⭐</option>
-                    <option value="star">⭐ Star ⭐</option>
-                  </select>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Catatan (mis. 'Customer VIP - bayar 250K')"
-                  value={newNotes}
-                  onChange={(e) => setNewNotes(e.target.value)}
-                  className="w-full bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
-                />
-                <label className="flex items-center gap-2 text-xs text-pink-900">
-                  <input
-                    type="checkbox"
-                    checked={newPremium}
-                    onChange={(e) => setNewPremium(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  Premium user (akses tema & maskot premium)
-                </label>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 disabled:opacity-60 text-white font-semibold py-2 px-3 rounded-lg text-xs"
-                >
-                  {submitting ? '⏳ Menambahkan...' : '➕ Tambah ke Whitelist'}
-                </button>
-              </form>
+                    {submitting ? '⏳ Menambahkan...' : '➕ Tambah ke Whitelist'}
+                  </button>
+                </form>
+              </div>
 
               {/* Existing whitelist entries */}
-              <div className="space-y-2">
+              <div className="grid gap-2">
                 {whitelist.map((entry) => (
                   <div
                     key={entry.email}
                     className={cn(
-                      'p-3 rounded-xl border-2',
+                      'p-3 rounded-xl border bg-slate-900/60 backdrop-blur-sm',
                       entry.is_active
-                        ? 'bg-emerald-50/60 border-emerald-200'
-                        : 'bg-gray-100 border-gray-300 opacity-60'
+                        ? 'border-slate-700'
+                        : 'border-slate-800 opacity-60'
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-bold text-pink-950 truncate">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-slate-100 truncate">
                             {entry.email}
                           </span>
                           {entry.is_premium && (
-                            <span className="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-500/30">
                               ⭐ Premium
                             </span>
                           )}
                           {!entry.is_active && (
-                            <span className="text-[9px] bg-rose-200 text-rose-900 px-1.5 py-0.5 rounded-full font-bold">
+                            <span className="text-[10px] bg-red-500/20 text-red-300 px-2 py-0.5 rounded-full font-bold border border-red-500/30">
                               Nonaktif
                             </span>
                           )}
                         </div>
-                        {entry.full_name && (
-                          <p className="text-[10px] text-pink-700/70 mt-0.5">{entry.full_name}</p>
-                        )}
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                           {entry.assigned_theme && (
-                            <span className="text-[9px] bg-pink-100 text-pink-800 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
                               🎨 {entry.assigned_theme}
                             </span>
                           )}
                           {entry.assigned_mascot && (
-                            <span className="text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">
                               🐾 {entry.assigned_mascot}
                             </span>
                           )}
                         </div>
                         {entry.notes && (
-                          <p className="text-[10px] text-pink-700/60 italic mt-1">
-                            {entry.notes}
-                          </p>
+                          <p className="text-[11px] text-slate-400 italic mt-1">{entry.notes}</p>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1 mt-2">
+                    <div className="flex flex-wrap gap-1.5 mt-2">
                       {entry.is_active ? (
                         <button
                           onClick={() => handleDeactivate(entry.email)}
-                          className="text-[9px] bg-rose-100 hover:bg-rose-200 text-rose-900 px-2 py-1 rounded font-semibold"
+                          className="text-[10px] bg-red-500/20 hover:bg-red-500/30 text-red-300 px-2 py-1 rounded-lg font-semibold border border-red-500/30 transition"
                         >
                           🚫 Deactivate
                         </button>
                       ) : (
                         <button
                           onClick={() => handleReactivate(entry.email)}
-                          className="text-[9px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 px-2 py-1 rounded font-semibold"
+                          className="text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 px-2 py-1 rounded-lg font-semibold border border-emerald-500/30 transition"
                         >
                           ✓ Reactivate
                         </button>
                       )}
                       <button
                         onClick={() => handleGrantElephant(entry.email)}
-                        className="text-[9px] bg-purple-100 hover:bg-purple-200 text-purple-900 px-2 py-1 rounded font-semibold"
+                        className="text-[10px] bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 px-2 py-1 rounded-lg font-semibold border border-purple-500/30 transition"
                       >
                         🐘 Grant Elephant
                       </button>
                       <button
                         onClick={() => handleDelete(entry.email)}
-                        className="text-[9px] bg-red-200 hover:bg-red-300 text-red-900 px-2 py-1 rounded font-semibold"
+                        className="text-[10px] bg-slate-700 hover:bg-red-500/30 text-slate-300 hover:text-red-300 px-2 py-1 rounded-lg font-semibold border border-slate-600 hover:border-red-500/30 transition"
                       >
                         🗑️ Delete
                       </button>
@@ -918,69 +949,71 @@ export default function AdminPanel({ onClose }: Props) {
           )}
 
           {/* ============================================================ */}
-          {/* TAB: Maintenance                                              */}
+          {/* TAB: Maintenance                                             */}
           {/* ============================================================ */}
           {activeTab === 'maintenance' && (
-            <section className="space-y-3">
-              <h4 className="text-xs font-bold text-pink-950 uppercase tracking-wider">
-                🔧 Maintenance Mode
-              </h4>
+            <section className="space-y-4 max-w-2xl">
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Maintenance Mode</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Block akses aplikasi untuk non-admin user
+                </p>
+              </div>
 
               {maintenance && (
                 <div
                   className={cn(
-                    'p-3 rounded-xl border-2',
+                    'p-4 rounded-2xl border-2',
                     maintenance.enabled
-                      ? 'bg-red-50 border-red-300'
-                      : 'bg-emerald-50 border-emerald-200'
+                      ? 'bg-red-500/10 border-red-500/40'
+                      : 'bg-emerald-500/10 border-emerald-500/40'
                   )}
                 >
-                  <p className="text-[10px] uppercase font-bold opacity-70">Current Status</p>
-                  <p className="text-sm font-bold mt-0.5">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Status Saat Ini
+                  </p>
+                  <p className="text-base font-bold mt-1">
                     {maintenance.enabled ? '🔴 ON (App blocked)' : '🟢 OFF (Normal)'}
                   </p>
                   {maintenance.started_at && (
-                    <p className="text-[10px] opacity-70 mt-0.5">
+                    <p className="text-xs text-slate-400 mt-1">
                       Started: {new Date(maintenance.started_at).toLocaleString()}
                     </p>
                   )}
                 </div>
               )}
 
-              <div className="space-y-3 bg-pink-50/50 p-3 rounded-xl">
-                {/* Toggle */}
-                <label className="flex items-center gap-2 text-xs font-bold text-pink-950">
+              <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 space-y-4">
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-200">
                   <input
                     type="checkbox"
                     checked={maintenanceForm.enabled}
                     onChange={(e) =>
                       setMaintenanceForm({ ...maintenanceForm, enabled: e.target.checked })
                     }
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-cyan-500"
                   />
                   Enable maintenance mode
                 </label>
 
-                {/* Message */}
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-pink-700 block mb-1">
-                    Message (shown to users)
+                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                    Pesan untuk User
                   </label>
                   <textarea
                     value={maintenanceForm.message}
                     onChange={(e) =>
                       setMaintenanceForm({ ...maintenanceForm, message: e.target.value })
                     }
-                    placeholder="We're upgrading GDP Budgeting to serve you better. Expected completion: 2 hours."
+                    placeholder="Kami sedang melakukan maintenance untuk meningkatkan layanan. Estimasi selesai: 2 jam."
                     rows={3}
-                    className="w-full bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none resize-none"
                   />
                 </div>
 
-                {/* Expected completion */}
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-pink-700 block mb-1">
-                    Expected completion (hours)
+                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                    Estimasi selesai (jam)
                   </label>
                   <input
                     type="number"
@@ -993,12 +1026,11 @@ export default function AdminPanel({ onClose }: Props) {
                         expected_completion_hours: parseInt(e.target.value, 10) || 1,
                       })
                     }
-                    className="w-24 bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
+                    className="w-24 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
 
-                {/* Allow admin access */}
-                <label className="flex items-center gap-2 text-xs text-pink-900">
+                <label className="flex items-center gap-2 text-sm text-slate-300">
                   <input
                     type="checkbox"
                     checked={maintenanceForm.allow_admin_access}
@@ -1008,16 +1040,15 @@ export default function AdminPanel({ onClose }: Props) {
                         allow_admin_access: e.target.checked,
                       })
                     }
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-cyan-500"
                   />
-                  Allow admin to access app during maintenance
+                  Allow admin tetap akses app selama maintenance
                 </label>
 
-                {/* Save button */}
                 <button
                   onClick={handleSaveMaintenance}
                   disabled={maintenanceSaving}
-                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 disabled:opacity-60 text-white font-bold py-2 px-3 rounded-lg text-xs"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:opacity-60 text-white font-bold py-2.5 px-3 rounded-xl text-sm transition"
                 >
                   {maintenanceSaving
                     ? '⏳ Saving...'
@@ -1027,90 +1058,95 @@ export default function AdminPanel({ onClose }: Props) {
                 </button>
               </div>
 
-              <p className="text-[10px] text-pink-700/60 italic">
-                ⚠️ When enabled, all non-admin users will see a maintenance modal and cannot
-                access the app. Admin (you) can still login.
+              <p className="text-[11px] text-slate-500 italic">
+                ⚠️ Saat enabled, semua non-admin user akan melihat modal maintenance dan tidak
+                bisa akses app. Admin (Anda) tetap bisa login.
               </p>
             </section>
           )}
 
           {/* ============================================================ */}
-          {/* TAB: Announcement                                            */}
+          {/* TAB: Banner (Announcement)                                  */}
           {/* ============================================================ */}
-          {activeTab === 'announcement' && (
-            <section className="space-y-3">
-              <h4 className="text-xs font-bold text-pink-950 uppercase tracking-wider">
-                📢 Announcement Banner
-              </h4>
+          {activeTab === 'banner' && (
+            <section className="space-y-4 max-w-2xl">
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Pengumuman Banner</h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Tampilkan pengumuman ke semua user (modal popup)
+                </p>
+              </div>
 
               {announcement && (
                 <div
                   className={cn(
-                    'p-3 rounded-xl border-2',
+                    'p-4 rounded-2xl border-2',
                     announcement.enabled
-                      ? 'bg-blue-50 border-blue-300'
-                      : 'bg-gray-100 border-gray-300'
+                      ? 'bg-cyan-500/10 border-cyan-500/40'
+                      : 'bg-slate-800/50 border-slate-700'
                   )}
                 >
-                  <p className="text-[10px] uppercase font-bold opacity-70">Current Status</p>
-                  <p className="text-sm font-bold mt-0.5">
-                    {announcement.enabled ? '📢 Banner Active' : '⚪ No banner'}
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Status Saat Ini
+                  </p>
+                  <p className="text-base font-bold mt-1">
+                    {announcement.enabled ? '📢 Banner Aktif' : '⚪ Tidak ada banner'}
                   </p>
                   {announcement.message && (
-                    <p className="text-xs text-pink-800 mt-1 italic">
+                    <p className="text-xs text-slate-300 mt-2 italic bg-slate-800/50 rounded-lg px-2 py-1">
                       &ldquo;{announcement.message}&rdquo;
                     </p>
                   )}
                 </div>
               )}
 
-              <div className="space-y-3 bg-pink-50/50 p-3 rounded-xl">
-                <label className="flex items-center gap-2 text-xs font-bold text-pink-950">
+              <div className="bg-slate-900/60 backdrop-blur-sm border border-slate-800 rounded-2xl p-4 space-y-4">
+                <label className="flex items-center gap-2 text-sm font-bold text-slate-200">
                   <input
                     type="checkbox"
                     checked={announcementForm.enabled}
                     onChange={(e) =>
                       setAnnouncementForm({ ...announcementForm, enabled: e.target.checked })
                     }
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-cyan-500"
                   />
-                  Show announcement banner
+                  Tampilkan pengumuman ke user
                 </label>
 
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-pink-700 block mb-1">
-                    Banner message
+                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                    Pesan Pengumuman
                   </label>
                   <textarea
                     value={announcementForm.message}
                     onChange={(e) =>
                       setAnnouncementForm({ ...announcementForm, message: e.target.value })
                     }
-                    placeholder="🎉 New feature: Couple Budgeting! Share your budget with your partner."
-                    rows={2}
-                    className="w-full bg-white/80 border border-pink-200 rounded-lg px-3 py-1.5 text-xs"
+                    placeholder="🎉 Fitur baru: Couple Budgeting! Sekarang Anda bisa share data dengan pasangan."
+                    rows={3}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none resize-none"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-pink-700 block mb-1">
-                    Type
+                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-2">
+                    Tipe Pengumuman
                   </label>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {(['info', 'warning', 'success'] as const).map((t) => (
                       <button
                         key={t}
                         type="button"
                         onClick={() => setAnnouncementForm({ ...announcementForm, type: t })}
                         className={cn(
-                          'text-xs px-3 py-1 rounded font-semibold border',
+                          'text-xs px-2 py-2 rounded-lg font-semibold border transition',
                           announcementForm.type === t
                             ? t === 'info'
-                              ? 'bg-blue-100 text-blue-900 border-blue-400'
+                              ? 'bg-blue-500/20 text-blue-300 border-blue-500/40'
                               : t === 'warning'
-                              ? 'bg-amber-100 text-amber-900 border-amber-400'
-                              : 'bg-emerald-100 text-emerald-900 border-emerald-400'
-                            : 'bg-white/50 text-pink-700 border-pink-200'
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                            : 'bg-slate-800/50 text-slate-400 border-slate-700 hover:border-slate-600'
                         )}
                       >
                         {t === 'info' ? 'ℹ️ Info' : t === 'warning' ? '⚠️ Warning' : '✅ Success'}
@@ -1119,38 +1155,115 @@ export default function AdminPanel({ onClose }: Props) {
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 text-xs text-pink-900">
+                {/* Live preview */}
+                {announcementForm.message && (
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
+                      Preview (User akan lihat ini)
+                    </label>
+                    <div
+                      className={cn(
+                        'rounded-xl p-3 border-2',
+                        announcementForm.type === 'info'
+                          ? 'bg-blue-500/10 border-blue-500/30'
+                          : announcementForm.type === 'warning'
+                          ? 'bg-amber-500/10 border-amber-500/30'
+                          : 'bg-emerald-500/10 border-emerald-500/30'
+                      )}
+                    >
+                      <p className="text-sm text-slate-100">
+                        {announcementForm.type === 'info' ? 'ℹ️' : announcementForm.type === 'warning' ? '⚠️' : '✅'} {announcementForm.message}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <label className="flex items-center gap-2 text-sm text-slate-300">
                   <input
                     type="checkbox"
                     checked={announcementForm.dismissible}
                     onChange={(e) =>
                       setAnnouncementForm({ ...announcementForm, dismissible: e.target.checked })
                     }
-                    className="w-4 h-4"
+                    className="w-4 h-4 accent-cyan-500"
                   />
-                  Dismissible (user can close)
+                  User bisa dismiss (klik OK)
                 </label>
 
                 <button
                   onClick={handleSaveAnnouncement}
                   disabled={announcementSaving}
-                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 disabled:opacity-60 text-white font-bold py-2 px-3 rounded-lg text-xs"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:opacity-60 text-white font-bold py-2.5 px-3 rounded-xl text-sm transition"
                 >
                   {announcementSaving
                     ? '⏳ Saving...'
                     : announcementForm.enabled
-                    ? '📢 Show Banner'
-                    : '🚫 Hide Banner'}
+                    ? '📢 Publish Announcement'
+                    : '🚫 Hide Announcement'}
                 </button>
               </div>
 
-              <p className="text-[10px] text-pink-700/60 italic">
-                ℹ️ Banner appears at top of dashboard for all logged-in users.
+              <p className="text-[11px] text-slate-500 italic">
+                ℹ️ Saat enabled, semua user akan melihat modal popup pengumuman saat buka app.
+                User harus klik "OK, Mengerti" untuk lanjut.
               </p>
             </section>
           )}
-        </div>
+        </main>
       </div>
+
+      {/* ============================================================ */}
+      {/* MODALS                                                       */}
+      {/* ============================================================ */}
+      {changeTierUser && (
+        <ChangeTierModal
+          open={!!changeTierUser}
+          user={changeTierUser}
+          onClose={() => setChangeTierUser(null)}
+          onConfirm={handleChangeTierConfirm}
+        />
+      )}
+
+      {suspendUser && (
+        <SuspendUserModal
+          open={!!suspendUser}
+          user={suspendUser}
+          onClose={() => setSuspendUser(null)}
+          onConfirm={handleSuspendConfirm}
+        />
+      )}
+    </div>
+  )
+}
+
+// ============================================================
+// Sub-component: KPI Card
+// ============================================================
+function KpiCard({
+  label,
+  value,
+  subtitle,
+  icon,
+  color,
+  textColor,
+}: {
+  label: string
+  value: number
+  subtitle?: string
+  icon: string
+  color: string
+  textColor: string
+}) {
+  return (
+    <div className={cn('rounded-2xl p-4 border bg-gradient-to-br', color)}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+          {label}
+        </p>
+        <span className="text-base">{icon}</span>
+      </div>
+      <p className={cn('text-2xl font-bold', textColor)}>{value}</p>
+      {subtitle && <p className="text-[10px] text-slate-500 mt-1">{subtitle}</p>}
     </div>
   )
 }

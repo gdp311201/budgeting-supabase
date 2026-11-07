@@ -130,11 +130,6 @@ export default async function LoginPage({
                   <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
                 </tr>
                 <tr className="border-b border-pink-100">
-                  <td className="py-1.5 px-2 text-pink-900 font-medium">🖼️ Custom Wallpaper</td>
-                  <td className="text-center text-slate-400 bg-slate-50/30">✕</td>
-                  <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>
-                </tr>
-                <tr className="border-b border-pink-100">
                   <td className="py-1.5 px-2 text-pink-900 font-medium">☁️ Cloud Backup</td>
                   <td className="text-center text-slate-400 bg-slate-50/30">✕</td>
                   <td className="text-center text-emerald-600 bg-pink-50/50">✓</td>

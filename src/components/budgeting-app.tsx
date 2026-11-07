@@ -28,6 +28,7 @@ import ReadOnlyOverlay from '@/components/read-only-overlay'
 import AnnouncementModal from '@/components/announcement-modal'
 import CoupleBudgetingModal from '@/components/couple-budgeting-modal'
 import PairingRequestBanner from '@/components/pairing-request-banner'
+import WelcomeGreetingModal from '@/components/welcome-greeting-modal'
 
 type Tab = 'input' | 'mutasi' | 'dashboard' | 'receipt' | 'search'
 const TABS: Tab[] = ['input', 'mutasi', 'dashboard', 'receipt', 'search']
@@ -98,6 +99,7 @@ export default function BudgetingApp({
   const [showSetup, setShowSetup] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showCoupleBudgeting, setShowCoupleBudgeting] = useState(false)
+  const [showWelcomeGreeting, setShowWelcomeGreeting] = useState(false)
 
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
 
@@ -246,6 +248,8 @@ export default function BudgetingApp({
   function handleOnboardingComplete(updatedProfile: Profile) {
     setProfile(updatedProfile)
     setShowOnboarding(false)
+    // Sprint 13: Show welcome greeting after onboarding (first-time only)
+    setShowWelcomeGreeting(true)
   }
 
   // ===== Settings Hub handler =====
@@ -278,6 +282,18 @@ export default function BudgetingApp({
         user={user}
         onComplete={handleOnboardingComplete}
       />
+    )
+  }
+
+  // ===== Welcome Greeting (first-time) =====
+  if (showWelcomeGreeting) {
+    return (
+      <>
+        <WelcomeGreetingModal
+          nickname={profile?.full_name}
+          onClose={() => setShowWelcomeGreeting(false)}
+        />
+      </>
     )
   }
 

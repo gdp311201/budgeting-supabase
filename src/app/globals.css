@@ -505,10 +505,10 @@ body::after {
 
 
 /* ============================================================
-   Rotating Light Border — Premium Modal Effect (Sprint 5)
-   Conic gradient (pink + rose) rotating around modal border.
-   Uses @property --angle (CSS Houdini) for smooth rotation.
-   Fallback: static border if @property not supported.
+   Rotating Light Border — Premium Modal Effect (Sprint 5C)
+   Simpler approach: wrapper div with padding + conic gradient bg.
+   No mask trick needed — more browser compatible.
+   Fallback: static gradient if @property not supported.
    ============================================================ */
 @property --modal-angle {
   syntax: '<angle>';
@@ -518,15 +518,8 @@ body::after {
 
 .premium-modal-border {
   position: relative;
-  isolation: isolate;
-}
-
-.premium-modal-border::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
   padding: 2px;
+  border-radius: 1.5rem;
   background: conic-gradient(
     from var(--modal-angle),
     transparent 0deg,
@@ -542,14 +535,7 @@ body::after {
     transparent 265deg,
     transparent 360deg
   );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   animation: rotateModalAngle 6s linear infinite;
-  z-index: 0;
-  pointer-events: none;
 }
 
 @keyframes rotateModalAngle {
@@ -579,7 +565,7 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   .wallpaper-bg { animation: none; }
   .premium-sweep { display: none; }
-  .premium-modal-border::before { animation: none; }
+  .premium-modal-border { animation: none; }
   .mascot-float-glow { animation: none; }
   body::after { animation: none; }
 }
